@@ -57,7 +57,10 @@ const RegisterScreen = ({ route, navigation }) => {
       console.log("Registration Success. Status:", response.status);
 
       // 3. SUCCESSFUL REDIRECTION
-      if (response.status === 200 || response.status === 201) {
+      if (response.status === 200 || response.status === 201 || response.status === 204) {
+      console.log("Navigating to MainTabs...");
+      navigation.replace('MainTabs'); 
+
         Alert.alert("Success! 🏆", `Welcome to ReadChamp, ${name}!`);
         
         // Navigation to the Bottom Tab Map
