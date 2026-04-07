@@ -5,7 +5,6 @@ import GameButton from '../components/GameButton';
 import { COLORS } from '../theme';
 
 const { width } = Dimensions.get('window');
-
 const WelcomeScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
