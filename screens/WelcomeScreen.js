@@ -1,106 +1,130 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView, StatusBar } from 'react-native';
-import GameButton from '../components/GameButton'; // Make sure this path is correct
-import { COLORS } from '../theme'; // Make sure this path is correct
+import { View, Text, StyleSheet, Image, SafeAreaView, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient'; // Add this
+import GameButton from '../components/GameButton';
+import { COLORS } from '../theme';
+
+const { width } = Dimensions.get('window');
 
 const WelcomeScreen = ({ navigation }) => {
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Set status bar color to match background */}
-      <StatusBar barStyle="dark-content" />
+    <View style={styles.container}>
+      {/* 1. SOFT PASTEL GRADIENT BACKGROUND */}
+      <LinearGradient
+        colors={['#E1F5FE', '#FCE4EC']} // Pastel Blue to Pastel Pink
+        style={StyleSheet.absoluteFill}
+      />
 
-      <View style={styles.content}>
-        
-        {/* 1. THE MASCOT IMAGE */}
-        <View style={styles.imageContainer}>
-          <Image 
-            source={require('../assets/mascot.png')} 
-            style={styles.mascot}
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* 2. THE TEXT AREA */}
-        <View style={styles.textContainer}>
-          <Text style={styles.title}>ReadChamp</Text>
-          <Text style={styles.subtitle}>
-            Ready to become a reading champion? 🏆
-          </Text>
-        </View>
-
-        {/* 3. THE ACTION BUTTON */}
-        <View style={styles.buttonContainer}>
-          <GameButton 
-            title="LET'S PLAY!" 
-            color={COLORS.primary} 
-            onPress={() => navigation.navigate('RoleSelection')} 
-          />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.content}>
           
-          <Text style={styles.footerText}>
-            Already have an account? Log In
-          </Text>
-        </View>
+          {/* 2. CENTERED & ZOOMED MASCOT */}
+          <View style={styles.imageContainer}>
+            <Image 
+              source={require('../assets/mascot.png')} 
+              style={styles.mascot}
+              resizeMode="contain"
+            />
+          </View>
 
-      </View>
-    </SafeAreaView>
+          {/* 3. REPOSITIONED TEXT (Moved Upward) */}
+          <View style={styles.textContainer}>
+            <Text style={styles.title}>ReadChamp</Text>
+            <Text style={styles.subtitle}>
+              Ready to become a reading champion? 🏆
+            </Text>
+          </View>
+
+          {/* 4. POLISHED BUTTON AREA */}
+          <View style={styles.buttonContainer}>
+            <GameButton 
+              title="LET'S PLAY!" 
+              color={COLORS.primary} 
+              onPress={() => navigation.navigate('RoleSelection')} 
+            />
+            
+            <Text style={styles.footerText}>
+              Already have an account? <Text style={styles.loginLink}>Log In</Text>
+            </Text>
+          </View>
+
+        </View>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF', // Clean white background
+  },
+  safeArea: {
+    flex: 1,
   },
   content: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'space-between', // Spaces things out evenly
-    paddingVertical: 50,
-    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+    paddingHorizontal: 25,
+    paddingTop: 40, // Keeps everything balanced
   },
   imageContainer: {
-    flex: 2, // Gives more space to the image
+    flex: 3, // Occupies more space to allow mascot to be "the focus"
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
   },
   mascot: {
-    width: '85%',
-    height: '85%',
+    width: width * 0.85, // Zooms in the mascot to 85% of screen width
+    height: width * 0.85,
+    // Add a slight "soft shadow" effect to the mascot
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   textContainer: {
-    flex: 1,
+    flex: 1.5,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start', // Pulls text slightly upward
+    marginTop: -20, // Fine-tuning text position
   },
   title: {
-    fontSize: 42,
-    fontWeight: '900', // Extra bold for kids
-    color: COLORS.primary, // Duolingo Blue
+    fontSize: 44,
+    fontWeight: '900',
+    color: COLORS.primary,
     letterSpacing: 1,
-    marginBottom: 10,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.05)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 1,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: 19,
     textAlign: 'center',
-    color: '#777',
+    color: '#607D8B', // Soft blue-grey for readability
     fontWeight: '600',
-    paddingHorizontal: 30,
-    lineHeight: 24,
+    paddingHorizontal: 20,
+    lineHeight: 26,
   },
   buttonContainer: {
     flex: 1,
     width: '100%',
     justifyContent: 'center',
-    paddingHorizontal: 10,
+    paddingBottom: 20,
   },
   footerText: {
     marginTop: 15,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#90A4AE',
+    fontWeight: '600',
+    fontSize: 14,
     textAlign: 'center',
     textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  loginLink: {
+    color: COLORS.primary,
+    fontWeight: '900',
   }
 });
 
