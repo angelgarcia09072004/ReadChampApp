@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameButton from '../components/GameButton';
-import API from '../services/api'; // Ensure this matches your services folder
+import API from '../services/api'; 
 import { COLORS } from '../theme';
 
 const { width } = Dimensions.get('window');
