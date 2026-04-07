@@ -1,76 +1,72 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, Alert, SafeAreaView } from 'react-native';
 import GameButton from '../components/GameButton';
 import { COLORS } from '../theme';
+import API from '../services/api'; // This is our Axios connection
 
 const LoginScreen = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = async () => {
+    try {
+      // 1. Send data to Laravel
+      const response = await API.post('/login', {
+        email: email,
+        password: password,
+      });
+
+      // 2. If successful, go to Dashboard
+      if (response.status === 200) {
+        navigation.navigate('Dashboard');
+      }
+    } catch (error) {
+      Alert.alert("Login Failed", "Check your email and password!");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        
-        {/* --- YOUR MASCOT IMAGE --- */}
-        <Image 
-          source={require('../assets/mascot.png')} 
-          style={styles.logoImage}
-          resizeMode="contain"
+      <Text style={styles.title}>Welcome Back! 🏆</Text>
+      
+      <View style={styles.form}>
+        <Text style={styles.label}>Email Address</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="example@email.com"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
         />
 
-        <Text style={styles.title}>ReadChamp</Text>
-        <Text style={styles.subtitle}>Ready to become a reading champion?</Text>
-        
-        <View style={styles.buttonContainer}>
-          <GameButton 
-            title="Let's Play!" 
-            color={COLORS.primary} 
-            onPress={() => navigation.navigate('Dashboard')} 
-          />
-          
-          <Text style={styles.footerText}>Already have an account? Log In</Text>
-        </View>
+        <Text style={styles.label}>Password</Text>
+        <TextInput 
+          style={styles.input} 
+          placeholder="Enter your password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
 
+        <GameButton title="Sign In" color={COLORS.success} onPress={handleLogin} />
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  logoImage: {
-    width: 250,  // Adjust size as needed
-    height: 250,
+  container: { flex: 1, backgroundColor: 'white', padding: 20 },
+  title: { fontSize: 32, fontWeight: 'bold', color: COLORS.primary, textAlign: 'center', marginVertical: 40 },
+  form: { width: '100%' },
+  label: { fontSize: 16, fontWeight: 'bold', color: '#4B4B4B', marginBottom: 5 },
+  input: {
+    backgroundColor: '#F7F7F7',
+    padding: 15,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: '#E5E5E5',
     marginBottom: 20,
-  },
-  title: {
-    fontSize: 38,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#777',
-    paddingHorizontal: 20,
-    marginBottom: 40,
-  },
-  buttonContainer: {
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  footerText: {
-    marginTop: 20,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontSize: 16
   }
 });
 
