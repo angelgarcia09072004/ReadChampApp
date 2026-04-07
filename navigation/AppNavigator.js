@@ -1,4 +1,5 @@
 import React from 'react';
+import MainTabs from './MainTabs';
 import RegisterScreen from '../screens/RegisterScreen'; 
 import WelcomeScreen from '../screens/WelcomeScreen';
 import { NavigationContainer } from '@react-navigation/native';
@@ -14,6 +15,7 @@ function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Welcome" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="RoleSelection" component={RoleSelectionScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
