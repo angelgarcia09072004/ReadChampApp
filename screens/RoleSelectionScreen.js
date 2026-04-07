@@ -1,17 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../theme';
 
-const RoleCard = ({ emoji, title, subtitle, color, onPress }) => (
+const RoleCard = ({ emoji, title, color, onPress }) => (
   <TouchableOpacity style={[styles.card, { borderColor: color }]} onPress={onPress}>
-    <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
-      <Text style={styles.emoji}>{emoji}</Text>
-    </View>
-    <View style={styles.cardText}>
-      <Text style={styles.cardTitle}>{title}</Text>
-      <Text style={styles.cardSubtitle}>{subtitle}</Text>
-    </View>
+    <Text style={styles.emoji}>{emoji}</Text>
+    <Text style={styles.cardTitle}>{title}</Text>
     <Text style={styles.arrow}>➔</Text>
   </TouchableOpacity>
 );
@@ -22,14 +17,14 @@ const RoleSelectionScreen = ({ navigation }) => {
       <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
       
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        {/* CENTERED CONTENT BOX */}
+        <View style={styles.centerContainer}>
           <Text style={styles.headerTitle}>Join the Team! ✨</Text>
-          <Text style={styles.headerSubtitle}>Pick your role to start learning</Text>
+          <Text style={styles.headerSubtitle}>Choose your role to sign up</Text>
 
           <RoleCard 
             emoji="🧒" 
             title="Student" 
-            subtitle="Ready for your next level? 🏆"
             color={COLORS.primary}
             onPress={() => navigation.navigate('Register', { role: 'student' })}
           />
@@ -37,7 +32,6 @@ const RoleSelectionScreen = ({ navigation }) => {
           <RoleCard 
             emoji="👪" 
             title="Parent" 
-            subtitle="Monitor your child's growth 📊"
             color={COLORS.success}
             onPress={() => navigation.navigate('Register', { role: 'parent' })}
           />
@@ -45,15 +39,14 @@ const RoleSelectionScreen = ({ navigation }) => {
           <RoleCard 
             emoji="👩‍🏫" 
             title="Teacher" 
-            subtitle="Manage your champions 📚"
-            color="#FFB300" // Gold
+            color="#FFB300" 
             onPress={() => navigation.navigate('Register', { role: 'teacher' })}
           />
 
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backLink}>Already have an account? Log In</Text>
+            <Text style={styles.backLink}>Go Back</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -61,10 +54,10 @@ const RoleSelectionScreen = ({ navigation }) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1 },
-  scroll: { padding: 25, alignItems: 'center' },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: COLORS.primary, marginTop: 20 },
-  headerSubtitle: { fontSize: 16, color: '#78909C', fontWeight: 'bold', marginBottom: 30 },
+  safeArea: { flex: 1, justifyContent: 'center' }, // Centering logic
+  centerContainer: { paddingHorizontal: 30, alignItems: 'center' },
+  headerTitle: { fontSize: 32, fontWeight: '900', color: COLORS.primary, marginBottom: 5 },
+  headerSubtitle: { fontSize: 16, color: '#78909C', fontWeight: 'bold', marginBottom: 40 },
   card: {
     backgroundColor: 'white',
     width: '100%',
@@ -80,13 +73,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 5,
   },
-  iconCircle: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
-  emoji: { fontSize: 35 },
-  cardText: { marginLeft: 15, flex: 1 },
-  cardTitle: { fontSize: 22, fontWeight: 'bold', color: '#455A64' },
-  cardSubtitle: { fontSize: 13, color: '#90A4AE', fontWeight: '600' },
-  arrow: { fontSize: 20, color: '#CFD8DC', fontWeight: 'bold' },
-  backLink: { marginTop: 20, color: COLORS.primary, fontWeight: '900', textTransform: 'uppercase' }
+  emoji: { fontSize: 35, marginRight: 20 },
+  cardTitle: { fontSize: 24, fontWeight: 'bold', color: '#455A64', flex: 1 },
+  arrow: { fontSize: 20, color: COLORS.primary, fontWeight: 'bold' },
+  backLink: { marginTop: 30, color: COLORS.primary, fontWeight: '900', fontSize: 14, textTransform: 'uppercase' }
 });
 
 export default RoleSelectionScreen;
