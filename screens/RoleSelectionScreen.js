@@ -31,7 +31,7 @@ const RoleSelectionScreen = ({ navigation }) => {
             title="Student" 
             subtitle="Ready for your next level? 🏆"
             color={COLORS.primary}
-            onPress={() => alert("Student Registration coming next!")}
+            onPress={() => navigation.navigate('Register', { role: 'student' })}
           />
 
           <RoleCard 
@@ -39,7 +39,7 @@ const RoleSelectionScreen = ({ navigation }) => {
             title="Parent" 
             subtitle="Monitor your child's growth 📊"
             color={COLORS.success}
-            onPress={() => alert("Parent Registration coming next!")}
+            onPress={() => navigation.navigate('Register', { role: 'parent' })}
           />
 
           <RoleCard 
@@ -47,7 +47,7 @@ const RoleSelectionScreen = ({ navigation }) => {
             title="Teacher" 
             subtitle="Manage your champions 📚"
             color="#FFB300" // Gold
-            onPress={() => alert("Teacher Registration coming next!")}
+            onPress={() => navigation.navigate('Register', { role: 'teacher' })}
           />
 
           <TouchableOpacity onPress={() => navigation.goBack()}>
