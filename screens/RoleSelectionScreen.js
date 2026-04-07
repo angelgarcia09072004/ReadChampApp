@@ -1,64 +1,92 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../theme';
+
+const RoleCard = ({ emoji, title, subtitle, color, onPress }) => (
+  <TouchableOpacity style={[styles.card, { borderColor: color }]} onPress={onPress}>
+    <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
+      <Text style={styles.emoji}>{emoji}</Text>
+    </View>
+    <View style={styles.cardText}>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardSubtitle}>{subtitle}</Text>
+    </View>
+    <Text style={styles.arrow}>➔</Text>
+  </TouchableOpacity>
+);
 
 const RoleSelectionScreen = ({ navigation }) => {
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Who is using ReadChamp today?</Text>
+    <View style={styles.container}>
+      <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
       
-      <View style={styles.grid}>
-        {/* STUDENT CARD */}
-        <TouchableOpacity 
-          style={[styles.card, { borderColor: COLORS.primary }]} 
-          onPress={() => navigation.navigate('Login', { role: 'student' })}
-        >
-          <Text style={styles.emoji}>🧒</Text>
-          <Text style={styles.roleTitle}>Student</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <Text style={styles.headerTitle}>Join the Team! ✨</Text>
+          <Text style={styles.headerSubtitle}>Pick your role to start learning</Text>
 
-        {/* PARENT CARD */}
-        <TouchableOpacity 
-          style={[styles.card, { borderColor: COLORS.success }]} 
-          onPress={() => navigation.navigate('Login', { role: 'parent' })}
-        >
-          <Text style={styles.emoji}>👪</Text>
-          <Text style={styles.roleTitle}>Parent</Text>
-        </TouchableOpacity>
+          <RoleCard 
+            emoji="🧒" 
+            title="Student" 
+            subtitle="Ready for your next level? 🏆"
+            color={COLORS.primary}
+            onPress={() => alert("Student Registration coming next!")}
+          />
 
-        {/* TEACHER CARD */}
-        <TouchableOpacity 
-          style={[styles.card, { borderColor: COLORS.warning }]} 
-          onPress={() => navigation.navigate('Login', { role: 'teacher' })}
-        >
-          <Text style={styles.emoji}>👩‍🏫</Text>
-          <Text style={styles.roleTitle}>Teacher</Text>
-        </TouchableOpacity>
-      </View>
+          <RoleCard 
+            emoji="👪" 
+            title="Parent" 
+            subtitle="Monitor your child's growth 📊"
+            color={COLORS.success}
+            onPress={() => alert("Parent Registration coming next!")}
+          />
 
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.backButton}>Go Back</Text>
-      </TouchableOpacity>
-    </SafeAreaView>
+          <RoleCard 
+            emoji="👩‍🏫" 
+            title="Teacher" 
+            subtitle="Manage your champions 📚"
+            color="#FFB300" // Gold
+            onPress={() => alert("Teacher Registration coming next!")}
+          />
+
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backLink}>Already have an account? Log In</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F7F7', alignItems: 'center', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#4B4B4B', textAlign: 'center', marginTop: 60, marginBottom: 40 },
-  grid: { width: '100%', gap: 15 },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
+  scroll: { padding: 25, alignItems: 'center' },
+  headerTitle: { fontSize: 32, fontWeight: '900', color: COLORS.primary, marginTop: 20 },
+  headerSubtitle: { fontSize: 16, color: '#78909C', fontWeight: 'bold', marginBottom: 30 },
   card: {
     backgroundColor: 'white',
-    padding: 25,
-    borderRadius: 20,
+    width: '100%',
+    padding: 20,
+    borderRadius: 25,
     borderWidth: 3,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10
+    marginBottom: 15,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
   },
-  emoji: { fontSize: 40, marginRight: 20 },
-  roleTitle: { fontSize: 22, fontWeight: 'bold', color: '#4B4B4B' },
-  backButton: { marginTop: 30, color: COLORS.primary, fontWeight: 'bold', fontSize: 16 }
+  iconCircle: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
+  emoji: { fontSize: 35 },
+  cardText: { marginLeft: 15, flex: 1 },
+  cardTitle: { fontSize: 22, fontWeight: 'bold', color: '#455A64' },
+  cardSubtitle: { fontSize: 13, color: '#90A4AE', fontWeight: '600' },
+  arrow: { fontSize: 20, color: '#CFD8DC', fontWeight: 'bold' },
+  backLink: { marginTop: 20, color: COLORS.primary, fontWeight: '900', textTransform: 'uppercase' }
 });
 
 export default RoleSelectionScreen;
