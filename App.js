@@ -1,8 +1,9 @@
 import React from 'react';
-import Dashboard from './screens/Dashboard';
+import 'react-native-gesture-handler'; // This must be at the very top
+import AppNavigator from './navigation/AppNavigator';
 
 export default function App() {
   return (
-    <Dashboard />
+    <AppNavigator />
   );
 }
