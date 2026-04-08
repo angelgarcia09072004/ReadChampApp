@@ -9,9 +9,9 @@ import {
   SafeAreaView, 
   KeyboardAvoidingView, 
   Platform, 
-  Dimensions 
+  Dimensions,
+  ActivityIndicator
 } from 'react-native';
-import RegisterScreen from '../screens/RegisterScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import GameButton from '../components/GameButton';
 import API from '../services/api';
@@ -20,7 +20,7 @@ import { COLORS } from '../theme';
 const { width } = Dimensions.get('window');
 
 const RegisterScreen = ({ route, navigation }) => {
-  // 1. Get the role from the Role Selection screen
+  // 1. Get role from parameters
   const { role } = route.params || { role: 'student' }; 
 
   // --- FORM STATES ---
@@ -28,23 +28,24 @@ const RegisterScreen = ({ route, navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // --- ERROR STATES (For red error messages) ---
+  // --- ERROR STATES ---
   const [errors, setErrors] = useState({});
 
   // 2. VALIDATION LOGIC
   const validateForm = () => {
     let tempErrors = {};
-    const emailRegex = /\S+@\S+\.\S+/; // Checks for @ and .com
+    const emailRegex = /\S+@\S+\.\S+/;
 
-    if (!name) {
-        tempErrors.name = "The name field is required.";
+    if (!name.trim()) {
+      tempErrors.name = "The name field is required.";
     }
 
-    if (!email) {
+    if (!email.trim()) {
       tempErrors.email = "The email field is required.";
     } else if (!emailRegex.test(email)) {
-      tempErrors.email = "The email must be a valid email address (missing @ or .com).";
+      tempErrors.email = "Enter a valid email (missing @ or .com).";
     }
 
     if (!password) {
@@ -58,35 +59,33 @@ const RegisterScreen = ({ route, navigation }) => {
     }
 
     setErrors(tempErrors);
-    
-    // Returns true if the errors object is empty
     return Object.keys(tempErrors).length === 0;
   };
 
   const handleRegister = async () => {
-    // Only proceed to API if frontend validation passes
     if (validateForm()) {
+      setLoading(true);
       try {
         const response = await API.post('/register', {
-          name: name,
-          email: email,
-          password: password,
-          password_confirmation: confirmPassword, // Laravel requires this exact name
-          role: role,
+          name,
+          email,
+          password,
+          password_confirmation: confirmPassword,
+          role,
         });
 
-        // 201 = Created, 204 = No Content (Success for Breeze API)
         if (response.status === 201 || response.status === 204 || response.status === 200) {
-          Alert.alert("Success! 🏆", "Your account is ready!");
+          Alert.alert("Success! 🏆", "Account created! Let's go!");
           navigation.replace('MainTabs'); 
         }
       } catch (error) {
         if (error.response && error.response.data.errors) {
-          // If Laravel finds an error (like email already taken), show it in red
           setErrors(error.response.data.errors);
         } else {
-          Alert.alert("Error", "Could not connect to the server. Check Laravel!");
+          Alert.alert("Error", "Network problem. Is your Laravel server running?");
         }
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -103,7 +102,7 @@ const RegisterScreen = ({ route, navigation }) => {
           <ScrollView contentContainerStyle={styles.scroll}>
             
             <Text style={styles.title}>Creating {role} Account 🏆</Text>
-            <Text style={styles.subtitle}>Fill in your details to start!</Text>
+            <Text style={styles.subtitle}>Let's start your reading journey!</Text>
             
             <View style={styles.formCard}>
               
@@ -115,6 +114,7 @@ const RegisterScreen = ({ route, navigation }) => {
                     value={name} 
                     onChangeText={(text) => { setName(text); setErrors({...errors, name: null}); }}
                     placeholder="Angel Garcia" 
+                    placeholderTextColor="#BDBDBD" // Subtle Gray Placeholder
                 />
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>
@@ -127,6 +127,7 @@ const RegisterScreen = ({ route, navigation }) => {
                     value={email} 
                     onChangeText={(text) => { setEmail(text); setErrors({...errors, email: null}); }}
                     placeholder="angel@gmail.com" 
+                    placeholderTextColor="#BDBDBD" // Subtle Gray Placeholder
                     keyboardType="email-address" 
                     autoCapitalize="none" 
                 />
@@ -141,6 +142,7 @@ const RegisterScreen = ({ route, navigation }) => {
                     value={password} 
                     onChangeText={(text) => { setPassword(text); setErrors({...errors, password: null}); }}
                     placeholder="Min. 8 characters" 
+                    placeholderTextColor="#BDBDBD" // Subtle Gray Placeholder
                     secureTextEntry 
                 />
                 {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
@@ -154,13 +156,18 @@ const RegisterScreen = ({ route, navigation }) => {
                     value={confirmPassword} 
                     onChangeText={(text) => { setConfirmPassword(text); setErrors({...errors, confirm: null}); }}
                     placeholder="Repeat your password" 
+                    placeholderTextColor="#BDBDBD" // Subtle Gray Placeholder
                     secureTextEntry 
                 />
                 {errors.confirm && <Text style={styles.errorText}>{errors.confirm}</Text>}
               </View>
 
               <View style={styles.buttonWrapper}>
-                <GameButton title="START LEARNING!" color={COLORS.success} onPress={handleRegister} />
+                {loading ? (
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                ) : (
+                    <GameButton title="START LEARNING!" color={COLORS.success} onPress={handleRegister} />
+                )}
               </View>
 
               <Text style={styles.backLink} onPress={() => navigation.goBack()}>
@@ -195,7 +202,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#90A4AE',
     fontWeight: 'bold',
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: 'center',
   },
   formCard: { 
@@ -203,15 +210,15 @@ const styles = StyleSheet.create({
     width: width * 0.9, 
     borderRadius: 35, 
     padding: 25, 
-    elevation: 10,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 15,
+    shadowRadius: 10,
   },
-  inputGroup: { marginBottom: 15 },
+  inputGroup: { marginBottom: 12 },
   label: { 
-    fontSize: 12, 
+    fontSize: 11, 
     fontWeight: '900', 
     color: '#B0BEC5', 
     marginBottom: 5,
@@ -220,31 +227,32 @@ const styles = StyleSheet.create({
   },
   input: { 
     backgroundColor: '#F7F7F7', 
-    padding: 15, 
-    borderRadius: 18, 
+    padding: 14, 
+    borderRadius: 15, 
     borderWidth: 2, 
     borderColor: '#E5E5E5', 
-    fontSize: 16,
+    fontSize: 15,
     color: '#4B4B4B',
     fontWeight: '600'
   },
   inputError: {
-    borderColor: '#FF4B4B', 
+    borderColor: '#FF4B4B',
   },
   errorText: {
     color: '#FF4B4B',
-    fontSize: 12,
-    marginTop: 5,
+    fontSize: 11,
+    marginTop: 3,
     marginLeft: 5,
     fontWeight: 'bold',
   },
   buttonWrapper: { marginTop: 15 },
   backLink: { 
     textAlign: 'center', 
-    marginTop: 20, 
+    marginTop: 15, 
     color: '#90A4AE', 
     fontWeight: 'bold',
-    fontSize: 14 
+    fontSize: 13 
   }
 });
+
 export default RegisterScreen;
