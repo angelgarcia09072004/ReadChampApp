@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
   imageContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: -30, // Pulls mascot closer to the card
+    marginBottom: -70, // Pulls mascot closer to the card
     zIndex: 1,
   },
   mascot: {
