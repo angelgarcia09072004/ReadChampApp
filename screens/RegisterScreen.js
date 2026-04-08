@@ -118,7 +118,7 @@ const RegisterScreen = ({ route, navigation }) => {
                         style={[styles.input, styles.passwordInput, errors.password && styles.inputError]} 
                         value={password} 
                         onChangeText={(t) => { setPassword(t); setErrors({...errors, password: null}); }}
-                        placeholder="•••••" 
+                        placeholder="Min. 8 characters" 
                         placeholderTextColor="#BDBDBD"
                         secureTextEntry={!showPassword} // Toggle visibility
                     />
@@ -144,7 +144,7 @@ const RegisterScreen = ({ route, navigation }) => {
                         style={[styles.input, styles.passwordInput, errors.confirm && styles.inputError]} 
                         value={confirmPassword} 
                         onChangeText={(t) => { setConfirmPassword(t); setErrors({...errors, confirm: null}); }}
-                        placeholder="•••" 
+                        placeholder="Confrim Pass" 
                         placeholderTextColor="#BDBDBD"
                         secureTextEntry={!showConfirmPassword} // Toggle visibility
                     />
