@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Image, SafeAreaView, Animated, Dimensions, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import GameButton from '../components/GameButton';
-import { COLORS } from '../theme';
+import GameButton from '../../components/GameButton';
+import { COLORS } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +35,7 @@ const WelcomeScreen = ({ navigation }) => {
         {/* 2. ZOOMED & FLOATING MASCOT */}
         <Animated.View style={[styles.imageContainer, { transform: [{ translateY: floatAnim }] }]}>
           <Image 
-            source={require('../assets/mascot.png')} 
+            source={require('../../assets/mascot.png')} 
             style={styles.mascot}
             resizeMode="contain"
           />

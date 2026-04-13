@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
-import { COLORS } from '../theme';
-import GameButton from '../components/GameButton';
+import { COLORS } from '../../theme';
+import GameButton from '../../components/GameButton';
 
 const Dashboard = () => {
   return (

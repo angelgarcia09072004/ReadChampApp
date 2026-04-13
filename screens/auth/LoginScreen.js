@@ -6,9 +6,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import GameButton from '../components/GameButton';
-import { COLORS } from '../theme';
-import API from '../services/api';
+import GameButton from '../../components/GameButton';
+import { COLORS } from '../../theme';
+import API from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -61,7 +61,7 @@ const LoginScreen = ({ navigation }) => {
           <ScrollView contentContainerStyle={styles.scrollContent}>
             
             <View style={styles.imageContainer}>
-              <Image source={require('../assets/mascot.png')} style={styles.mascot} resizeMode="contain" />
+              <Image source={require('../../assets/mascot.png')} style={styles.mascot} resizeMode="contain" />
             </View>
 
             <View style={styles.formCard}>

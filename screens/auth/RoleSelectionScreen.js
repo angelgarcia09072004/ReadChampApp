@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '../theme';
+import { COLORS } from '../../theme';
 
 const RoleCard = ({ emoji, title, color, onPress }) => (
   <TouchableOpacity style={[styles.card, { borderColor: color }]} onPress={onPress}>

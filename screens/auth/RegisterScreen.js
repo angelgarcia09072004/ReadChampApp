@@ -6,9 +6,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons'; // Import Icons
-import GameButton from '../components/GameButton';
-import API from '../services/api';
-import { COLORS } from '../theme';
+import GameButton from '../../components/GameButton';
+import API from '../../services/api';
+import { COLORS } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
