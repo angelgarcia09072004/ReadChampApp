@@ -15,12 +15,22 @@ const { width } = Dimensions.get('window');
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState('student'); // Default role
+  const [selectedRole, setSelectedRole] = useState('student');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // THE ACTION BUTTON LOGIC
   const handleLogin = async () => {
+    // --- TEMPORARY BYPASS FOR CAPSTONE PROGRESS ---
+    // This allows you to skip the database and see your Dashboard/Map
+    console.log("Bypassing database... Welcome Champ!");
+    navigation.replace('MainTabs'); 
+    return;
+    // ----------------------------------------------
+
+    /* 
+    // FUTURE CODE: When your Laravel network is fixed, use this:
     setErrors({});
     if (!email || !password) {
       setErrors({
@@ -29,32 +39,18 @@ const LoginScreen = ({ navigation }) => {
       });
       return;
     }
-
     setLoading(true);
     try {
-      // We send the selectedRole to the backend to verify
-      const response = await API.post('/login', {
-        email,
-        password,
-        role: selectedRole 
-      });
-
+      const response = await API.post('/login', { email, password, role: selectedRole });
       if (response.status === 200) {
-        const user = response.data.user;
-        // Navigate based on role
-        if (user.role === 'student') navigation.replace('MainTabs');
-        else if (user.role === 'parent') navigation.replace('ParentDashboard');
-        else navigation.replace('TeacherDashboard');
+        navigation.replace('MainTabs');
       }
     } catch (error) {
-      if (error.response && error.response.status === 422) {
-        setErrors({ email: "Invalid credentials for this role." });
-      } else {
-        Alert.alert("Error", "Network problem. Is Laravel running?");
-      }
+      setErrors({ email: "Invalid credentials for this role." });
     } finally {
       setLoading(false);
     }
+    */
   };
 
   return (
@@ -71,7 +67,6 @@ const LoginScreen = ({ navigation }) => {
             <View style={styles.formCard}>
               <Text style={styles.title}>Welcome Back!</Text>
               
-              {/* --- ROLE SELECTOR --- */}
               <Text style={styles.labelCenter}>I AM A:</Text>
               <View style={styles.roleContainer}>
                 {['student', 'parent', 'teacher'].map((role) => (
@@ -97,34 +92,30 @@ const LoginScreen = ({ navigation }) => {
                   placeholder="example@email.com"
                   placeholderTextColor="#BDBDBD"
                   value={email}
-                  onChangeText={(t) => { setEmail(t); setErrors({...errors, email: null}); }}
+                  onChangeText={(t) => setEmail(t)}
                   autoCapitalize="none"
                 />
-                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>PASSWORD</Text>
                 <View style={styles.passwordWrapper}>
                     <TextInput 
-                      style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
+                      style={[styles.input, styles.passwordInput]}
                       placeholder="••••••••"
                       placeholderTextColor="#BDBDBD"
                       value={password}
-                      onChangeText={(t) => { setPassword(t); setErrors({...errors, password: null}); }}
+                      onChangeText={(t) => setPassword(t)}
                       secureTextEntry={!showPassword}
                     />
                     <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
                         <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color="#B0BEC5" />
                     </TouchableOpacity>
                 </View>
-                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
 
               <View style={styles.buttonWrapper}>
-                {loading ? <ActivityIndicator size="large" color={COLORS.primary} /> : (
-                  <GameButton title="LOG IN" color={COLORS.success} onPress={handleLogin} />
-                )}
+                <GameButton title="LOG IN" color={COLORS.success} onPress={handleLogin} />
               </View>
 
               <Text style={styles.signUpLink} onPress={() => navigation.navigate('RoleSelection')}>
@@ -149,20 +140,13 @@ const styles = StyleSheet.create({
     elevation: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 15 
   },
   title: { fontSize: 28, fontWeight: '900', color: COLORS.primary, textAlign: 'center', marginBottom: 20 },
-  
-  // ROLE SELECTOR STYLES
   labelCenter: { fontSize: 11, fontWeight: '900', color: '#B0BEC5', textAlign: 'center', marginBottom: 10, letterSpacing: 1 },
   roleContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
-  roleButton: { 
-    flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 12, borderWidth: 2, borderColor: '#F0F0F0', alignItems: 'center' 
-  },
+  roleButton: { flex: 1, marginHorizontal: 4, paddingVertical: 8, borderRadius: 12, borderWidth: 2, borderColor: '#F0F0F0', alignItems: 'center' },
   roleButtonText: { fontSize: 10, fontWeight: '900', color: '#B0BEC5' },
-
   inputGroup: { marginBottom: 15, width: '100%' },
   label: { fontSize: 11, fontWeight: '900', color: '#B0BEC5', marginBottom: 8, marginLeft: 5, letterSpacing: 1 },
-  input: { backgroundColor: '#F7F7F7', padding: 14, borderRadius: 18, borderWidth: 2, borderColor: '#E5E5E5', fontSize: 15, color: '#4B4B4B', fontWeight: '600' },
-  inputError: { borderColor: '#FF4B4B' },
-  errorText: { color: '#FF4B4B', fontSize: 11, marginTop: 5, marginLeft: 5, fontWeight: 'bold' },
+  input: { backgroundColor: '#F7F7F7', padding: 14, borderRadius: 18, borderWidth: 2, borderColor: '#E5E5E5', fontSize: 15, color: '#4B4B4B' },
   passwordWrapper: { position: 'relative', justifyContent: 'center' },
   passwordInput: { paddingRight: 55 },
   eyeIcon: { position: 'absolute', right: 15, height: '100%', justifyContent: 'center' },
