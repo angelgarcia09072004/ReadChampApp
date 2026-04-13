@@ -4,6 +4,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme';
 import TeacherHome from '../screens/teacher/TeacherHome';
+import TeacherStudents from '../screens/teacher/TeacherStudents';
+import StudentProfile from '../screens/student/StudentProfile';
 
 const Tab = createBottomTabNavigator();
 
@@ -30,8 +32,8 @@ const TeacherTabs = () => {
       })}
     >
       <Tab.Screen name="Dashboard" component={TeacherHome} />
-      <Tab.Screen name="Students" component={() => <Placeholder name="Student List" />} />
-      <Tab.Screen name="Profile" component={() => <Placeholder name="Profile" />} />
+      <Tab.Screen name="Students" component={TeacherStudents} />
+      <Tab.Screen name="Profile" component={StudentProfile} />
     </Tab.Navigator>
   );
 };

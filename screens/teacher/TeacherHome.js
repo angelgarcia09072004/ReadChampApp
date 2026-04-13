@@ -1,23 +1,43 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
-  View, Text, StyleSheet, ScrollView, SafeAreaView, 
-  StatusBar, Platform, TouchableOpacity, Dimensions 
+  View, Text, StyleSheet, ScrollView, SafeAreaView, StatusBar, 
+  Platform, TouchableOpacity, Animated, Dimensions, Modal 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
 
 const { width } = Dimensions.get('window');
 
-const StatCard = ({ title, value, icon, color }) => (
-  <View style={styles.statCard}>
-    <Ionicons name={icon} size={20} color={color} />
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{title}</Text>
-  </View>
-);
+// --- Interactive Card Component ---
+const PressableCard = ({ children, style, onPress }) => {
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const onPressIn = () => Animated.spring(scaleValue, { toValue: 0.96, useNativeDriver: true }).start();
+  const onPressOut = () => Animated.spring(scaleValue, { toValue: 1, useNativeDriver: true }).start();
 
-const TeacherHome = () => {
+  return (
+    <TouchableOpacity activeOpacity={1} onPressIn={onPressIn} onPressOut={onPressOut} onPress={onPress}>
+      <Animated.View style={[style, { transform: [{ scale: scaleValue }] }]}>
+        {children}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
+
+const TeacherHome = ({ navigation }) => {
+  const [fabOpen, setFabOpen] = useState(false);
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  // Floating effect for cards
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, { toValue: -8, duration: 2000, useNativeDriver: true }),
+        Animated.timing(floatAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -30,64 +50,79 @@ const TeacherHome = () => {
           <View style={styles.header}>
             <View>
               <Text style={styles.greeting}>Ms. Garcia 👩‍🏫</Text>
-              <Text style={styles.subGreeting}>Good morning! Here's your class overview</Text>
+              <Text style={styles.subGreeting}>Good morning! Class overview</Text>
             </View>
-            <TouchableOpacity style={styles.notifBtn}>
+            <PressableCard style={styles.notifBtn}>
               <Ionicons name="notifications" size={24} color={COLORS.primary} />
-            </TouchableOpacity>
+            </PressableCard>
           </View>
 
-          {/* STATS GRID */}
-          <View style={styles.grid}>
-            <StatCard title="Students" value="24" icon="people" color={COLORS.primary} />
-            <StatCard title="Active Today" value="18" icon="checkmark-circle" color={COLORS.success} />
-            <StatCard title="Avg Class XP" value="1.2k" icon="star" color="#FFB300" />
-            <StatCard title="Done Tasks" value="85%" icon="book" color="#FF7043" />
-          </View>
-
-          {/* STUDENT MANAGEMENT SECTION */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Student Progress 📈</Text>
-            <Text style={styles.viewAll}>View All</Text>
-          </View>
-
-          {/* MOCK STUDENT LIST */}
-          {['Angel Garcia', 'John Doe', 'Maria Santos'].map((student, i) => (
-            <View key={i} style={styles.studentCard}>
-              <View style={styles.studentInfo}>
-                <View style={styles.avatarMini}><Text>🧒</Text></View>
-                <View>
-                  <Text style={styles.studentName}>{student}</Text>
-                  <Text style={styles.studentLevel}>Level {5 + i} • 320 XP</Text>
+          {/* CROWN SECTION (TOP STUDENT) */}
+          <PressableCard style={styles.topStudentCard}>
+             <LinearGradient colors={['#FFD700', '#FFA000']} style={styles.crownGradient}>
+                <MaterialCommunityIcons name="crown" size={30} color="white" />
+                <View style={{marginLeft: 15}}>
+                    <Text style={styles.crownText}>Weekly Champion</Text>
+                    <Text style={styles.topStudentName}>Angel Garcia • 1,240 XP</Text>
                 </View>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: i === 2 ? '#FFEBEE' : '#E8F5E9' }]}>
-                <Text style={[styles.statusText, { color: i === 2 ? '#FF5252' : '#4CAF50' }]}>
-                  {i === 2 ? 'Needs Help' : 'Active'}
-                </Text>
-              </View>
-            </View>
-          ))}
+             </LinearGradient>
+          </PressableCard>
 
-          {/* QUICK ACTIONS */}
-          <Text style={styles.sectionTitle}>Quick Actions 📢</Text>
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionItem}>
-              <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                <Ionicons name="person-add" size={24} color={COLORS.primary} />
-              </View>
-              <Text style={styles.actionLabel}>Add Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem}>
-              <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                <Ionicons name="megaphone" size={24} color={COLORS.success} />
-              </View>
-              <Text style={styles.actionLabel}>Announce</Text>
+          {/* DASHBOARD STATS */}
+          <View style={styles.grid}>
+            {[
+                { label: 'Students', val: '24', icon: 'people', color: COLORS.primary },
+                { label: 'Active', val: '18', icon: 'flash', color: COLORS.success },
+            ].map((stat, i) => (
+                <PressableCard key={i} style={styles.statCard}>
+                    <Ionicons name={stat.icon} size={24} color={stat.color} />
+                    <Text style={styles.statValue}>{stat.val}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                </PressableCard>
+            ))}
+          </View>
+
+          {/* STUDENT PREVIEW */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Students Progress</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Students')}>
+                <Text style={styles.viewAll}>View All ➔</Text>
             </TouchableOpacity>
           </View>
+
+          <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
+              <PressableCard style={styles.studentPreviewCard}>
+                <View style={styles.avatarMini}><Text>🧒</Text></View>
+                <View style={{flex: 1, marginLeft: 12}}>
+                    <Text style={styles.studentName}>Angel Garcia</Text>
+                    <View style={styles.xpBarBg}>
+                        <View style={[styles.xpBarFill, { width: '70%' }]} />
+                    </View>
+                </View>
+                <View style={styles.statusDot} />
+              </PressableCard>
+          </Animated.View>
 
         </ScrollView>
       </SafeAreaView>
+
+      {/* FLOATING ACTION BUTTON (FAB) */}
+      <TouchableOpacity 
+        style={styles.fab} 
+        onPress={() => setFabOpen(!fabOpen)}
+      >
+        <LinearGradient colors={[COLORS.primary, '#64B5F6']} style={styles.fabGradient}>
+            <Ionicons name={fabOpen ? "close" : "add"} size={30} color="white" />
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* QUICK ACTIONS MENU */}
+      {fabOpen && (
+          <View style={styles.fabMenu}>
+              <TouchableOpacity style={styles.fabMenuItem}><Text style={styles.fabLabel}>Add Student</Text><Ionicons name="person-add" size={20} color="white"/></TouchableOpacity>
+              <TouchableOpacity style={styles.fabMenuItem}><Text style={styles.fabLabel}>Create Task</Text><Ionicons name="book" size={20} color="white"/></TouchableOpacity>
+          </View>
+      )}
     </View>
   );
 };
@@ -95,29 +130,38 @@ const TeacherHome = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0 },
-  scrollContent: { padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  scrollContent: { padding: 25 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { fontSize: 26, fontWeight: '900', color: '#455A64' },
   subGreeting: { fontSize: 14, color: '#90A4AE', fontWeight: 'bold' },
-  notifBtn: { backgroundColor: 'white', padding: 10, borderRadius: 15, elevation: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
-  statCard: { backgroundColor: 'white', width: '47%', padding: 15, borderRadius: 20, marginBottom: 15, elevation: 3 },
-  statValue: { fontSize: 20, fontWeight: '900', color: '#455A64', marginTop: 5 },
+  notifBtn: { backgroundColor: 'white', padding: 10, borderRadius: 15, elevation: 5 },
+  
+  topStudentCard: { marginBottom: 20, elevation: 10 },
+  crownGradient: { padding: 20, borderRadius: 25, flexDirection: 'row', alignItems: 'center' },
+  crownText: { color: 'rgba(255,255,255,0.8)', fontWeight: 'bold', fontSize: 12 },
+  topStudentName: { color: 'white', fontWeight: '900', fontSize: 18 },
+
+  grid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  statCard: { backgroundColor: 'white', width: '47%', padding: 20, borderRadius: 25, elevation: 4, alignItems: 'center' },
+  statValue: { fontSize: 22, fontWeight: '900', color: '#455A64', marginTop: 5 },
   statLabel: { fontSize: 12, fontWeight: 'bold', color: '#B0BEC5' },
+
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', color: '#455A64', marginTop: 10, marginBottom: 10 },
-  viewAll: { color: COLORS.primary, fontWeight: 'bold' },
-  studentCard: { backgroundColor: 'white', padding: 15, borderRadius: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, elevation: 2 },
-  studentInfo: { flexDirection: 'row', alignItems: 'center' },
-  avatarMini: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  studentName: { fontSize: 16, fontWeight: 'bold', color: '#455A64' },
-  studentLevel: { fontSize: 12, color: '#90A4AE', fontWeight: 'bold' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  statusText: { fontSize: 10, fontWeight: '900' },
-  actionsRow: { flexDirection: 'row', gap: 15 },
-  actionItem: { alignItems: 'center' },
-  actionIcon: { width: 60, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 5 },
-  actionLabel: { fontSize: 11, fontWeight: 'bold', color: '#78909C' }
+  sectionTitle: { fontSize: 20, fontWeight: '900', color: '#455A64' },
+  viewAll: { color: COLORS.primary, fontWeight: '900' },
+
+  studentPreviewCard: { backgroundColor: 'white', padding: 15, borderRadius: 20, flexDirection: 'row', alignItems: 'center', elevation: 3 },
+  avatarMini: { width: 45, height: 45, borderRadius: 22, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
+  studentName: { fontWeight: '900', color: '#455A64', marginBottom: 5 },
+  xpBarBg: { height: 8, backgroundColor: '#F0F0F0', borderRadius: 4 },
+  xpBarFill: { height: '100%', backgroundColor: COLORS.success, borderRadius: 4 },
+  statusDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.success, marginLeft: 10 },
+
+  fab: { position: 'absolute', bottom: 30, right: 30, elevation: 10 },
+  fabGradient: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
+  fabMenu: { position: 'absolute', bottom: 100, right: 30, alignItems: 'flex-end' },
+  fabMenuItem: { backgroundColor: COLORS.primary, flexDirection: 'row', padding: 12, borderRadius: 20, marginBottom: 10, alignItems: 'center', elevation: 5 },
+  fabLabel: { color: 'white', fontWeight: 'bold', marginRight: 10 }
 });
 
 export default TeacherHome;
