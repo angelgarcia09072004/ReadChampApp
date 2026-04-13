@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   View, Text, StyleSheet, Image, TextInput, 
   SafeAreaView, KeyboardAvoidingView, Platform, 
-  ScrollView, Dimensions, Alert, ActivityIndicator, TouchableOpacity 
+  ScrollView, Dimensions, Alert, ActivityIndicator, TouchableOpacity, StatusBar
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,17 +20,7 @@ const LoginScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // THE ACTION BUTTON LOGIC
   const handleLogin = async () => {
-    // --- TEMPORARY BYPASS FOR CAPSTONE PROGRESS ---
-    // This allows you to skip the database and see your Dashboard/Map
-    console.log("Bypassing database... Welcome Champ!");
-    navigation.replace('MainTabs'); 
-    return;
-    // ----------------------------------------------
-
-    /* 
-    // FUTURE CODE: When your Laravel network is fixed, use this:
     setErrors({});
     if (!email || !password) {
       setErrors({
@@ -39,22 +29,37 @@ const LoginScreen = ({ navigation }) => {
       });
       return;
     }
+
     setLoading(true);
     try {
       const response = await API.post('/login', { email, password, role: selectedRole });
+
       if (response.status === 200) {
-        navigation.replace('MainTabs');
+        const user = response.data.user;
+        
+        // REDIRECT TO THE CORRECT TAB NAVIGATOR
+        if (user.role === 'student') {
+            navigation.replace('MainTabs');
+        } else if (user.role === 'parent') {
+            navigation.replace('ParentTabs');
+        } else if (user.role === 'teacher') {
+            navigation.replace('TeacherTabs');
+        }
       }
     } catch (error) {
-      setErrors({ email: "Invalid credentials for this role." });
+      if (error.response && error.response.status === 422) {
+        setErrors({ email: "Invalid credentials for this role." });
+      } else {
+        Alert.alert("Error", "Network problem. Is your Laravel server running?");
+      }
     } finally {
       setLoading(false);
     }
-    */
   };
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
       <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safeArea}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
@@ -92,30 +97,34 @@ const LoginScreen = ({ navigation }) => {
                   placeholder="example@email.com"
                   placeholderTextColor="#BDBDBD"
                   value={email}
-                  onChangeText={(t) => setEmail(t)}
+                  onChangeText={(t) => { setEmail(t); setErrors({...errors, email: null}); }}
                   autoCapitalize="none"
                 />
+                {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>PASSWORD</Text>
                 <View style={styles.passwordWrapper}>
                     <TextInput 
-                      style={[styles.input, styles.passwordInput]}
+                      style={[styles.input, styles.passwordInput, errors.password && styles.inputError]}
                       placeholder="••••••••"
                       placeholderTextColor="#BDBDBD"
                       value={password}
-                      onChangeText={(t) => setPassword(t)}
+                      onChangeText={(t) => { setPassword(t); setErrors({...errors, password: null}); }}
                       secureTextEntry={!showPassword}
                     />
                     <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
                         <Ionicons name={showPassword ? "eye-off" : "eye"} size={24} color="#B0BEC5" />
                     </TouchableOpacity>
                 </View>
+                {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
               </View>
 
               <View style={styles.buttonWrapper}>
-                <GameButton title="LOG IN" color={COLORS.success} onPress={handleLogin} />
+                {loading ? <ActivityIndicator size="large" color={COLORS.primary} /> : (
+                  <GameButton title="LOG IN" color={COLORS.success} onPress={handleLogin} />
+                )}
               </View>
 
               <Text style={styles.signUpLink} onPress={() => navigation.navigate('RoleSelection')}>
@@ -146,7 +155,9 @@ const styles = StyleSheet.create({
   roleButtonText: { fontSize: 10, fontWeight: '900', color: '#B0BEC5' },
   inputGroup: { marginBottom: 15, width: '100%' },
   label: { fontSize: 11, fontWeight: '900', color: '#B0BEC5', marginBottom: 8, marginLeft: 5, letterSpacing: 1 },
-  input: { backgroundColor: '#F7F7F7', padding: 14, borderRadius: 18, borderWidth: 2, borderColor: '#E5E5E5', fontSize: 15, color: '#4B4B4B' },
+  input: { backgroundColor: '#F7F7F7', padding: 14, borderRadius: 18, borderWidth: 2, borderColor: '#E5E5E5', fontSize: 15, color: '#4B4B4B', fontWeight: '600' },
+  inputError: { borderColor: '#FF4B4B' },
+  errorText: { color: '#FF4B4B', fontSize: 11, marginTop: 5, marginLeft: 5, fontWeight: 'bold' },
   passwordWrapper: { position: 'relative', justifyContent: 'center' },
   passwordInput: { paddingRight: 55 },
   eyeIcon: { position: 'absolute', right: 15, height: '100%', justifyContent: 'center' },

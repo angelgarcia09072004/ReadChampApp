@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme';
 
-// Import from the new STUDENT folder
 import StudentHome from '../screens/student/StudentHome';
 import StudentStats from '../screens/student/StudentStats';
 import StudentProfile from '../screens/student/StudentProfile';
@@ -20,7 +19,9 @@ const MainTabs = () => {
           return <Ionicons name={iconName} size={size} color={color} />;
         },
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: 'gray',
+        tabBarInactiveTintColor: '#B0BEC5',
+        tabBarStyle: { height: 70, paddingBottom: 10, borderTopWidth: 1, borderTopColor: '#ECEFF1' },
+        tabBarLabelStyle: { fontWeight: '900', fontSize: 11, marginBottom: 5 }
       })}
     >
       <Tab.Screen name="Home" component={StudentHome} />
