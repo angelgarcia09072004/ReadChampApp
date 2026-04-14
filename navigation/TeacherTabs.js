@@ -6,6 +6,7 @@ import { COLORS } from '../theme';
 import TeacherHome from '../screens/teacher/TeacherHome';
 import TeacherStudents from '../screens/teacher/TeacherStudents';
 import StudentProfile from '../screens/student/StudentProfile';
+import TeacherProfile from '../screens/teacher/TeacherProfile';
 
 const Tab = createBottomTabNavigator();
 
@@ -33,7 +34,7 @@ const TeacherTabs = () => {
     >
       <Tab.Screen name="Dashboard" component={TeacherHome} />
       <Tab.Screen name="Students" component={TeacherStudents} />
-      <Tab.Screen name="Profile" component={StudentProfile} />
+      <Tab.Screen name="Profile" component={TeacherProfile} />
     </Tab.Navigator>
   );
 };

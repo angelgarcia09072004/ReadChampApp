@@ -23,28 +23,37 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     setErrors({});
     if (!email || !password) {
-      setErrors({ email: !email ? "Email required" : null, password: !password ? "Password required" : null });
+      setErrors({
+        email: !email ? "Email is required" : null,
+        password: !password ? "Password is required" : null
+      });
       return;
     }
 
     setLoading(true);
     try {
-      const response = await API.post('/login', { email, password, role: selectedRole });
+      // 1. We send the selectedRole ('student', 'parent', or 'teacher')
+      const response = await API.post('/login', {
+        email: email,
+        password: password,
+        role: selectedRole 
+      });
 
       if (response.status === 200) {
-        const user = response.data.user;
-
-        // --- REDIRECT BASED ON DATABASE ROLE ---
-        if (user.role === 'student') {
-          navigation.replace('MainTabs');
-        } else if (user.role === 'teacher') {
-          navigation.replace('TeacherTabs');
-        } else if (user.role === 'parent') {
-          navigation.replace('ParentTabs');
-        }
+        const user = response.data.user; 
+        
+        // 2. Navigate based on the role the DATABASE says you are
+        if (user.role === 'student') navigation.replace('MainTabs');
+        else if (user.role === 'parent') navigation.replace('ParentTabs');
+        else if (user.role === 'teacher') navigation.replace('TeacherTabs');
       }
     } catch (error) {
-      setErrors({ email: "Credentials do not match our records." });
+      if (error.response && error.response.status === 422) {
+        // This is the error you are seeing in the screenshot
+        setErrors({ email: "Credentials do not match our records." });
+      } else {
+        Alert.alert("Error", "Network problem. Check Laravel!");
+      }
     } finally {
       setLoading(false);
     }
