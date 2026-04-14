@@ -52,11 +52,9 @@ const RegisterScreen = ({ route, navigation }) => {
 
           // --- REDIRECT BASED ON ROLE ---
           if (role === 'student') {
-            navigation.replace('MainTabs'); // Student Map
+            navigation.replace('MainTabs'); 
           } else if (role === 'teacher') {
-            navigation.replace('TeacherTabs'); // Ms. Garcia Dashboard
-          } else if (role === 'parent') {
-            navigation.replace('ParentTabs'); // Parent Dashboard
+            navigation.replace('TeacherTabs'); 
           }
         }
       } catch (error) {

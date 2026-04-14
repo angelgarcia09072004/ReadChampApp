@@ -11,7 +11,6 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 // Role Navigators
 import MainTabs from './MainTabs';       // For Students
 import TeacherTabs from './TeacherTabs'; // For Teachers
-import ParentTabs from './ParentTabs';   // For Parents
 
 const Stack = createStackNavigator();
 
@@ -27,7 +26,6 @@ function AppNavigator() {
         {/* Dashboard Navigators */}
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="TeacherTabs" component={TeacherTabs} />
-        <Stack.Screen name="ParentTabs" component={ParentTabs} />
       </Stack.Navigator>
     </NavigationContainer>
   );

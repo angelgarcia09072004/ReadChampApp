@@ -1,248 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  ImageBackground, 
-  Dimensions, 
-  SafeAreaView,
-  ActivityIndicator,
-  StatusBar, 
-  Platform    
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
+  Dimensions, ActivityIndicator, StatusBar, Platform, Modal 
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
 import API from '../../services/api';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-// --- Level Node Component (The Circular Levels) ---
-const LevelNode = ({ level, status, onPress, style }) => {
-  const isLocked = status === 'locked';
-  const isCurrent = status === 'current';
-  const isCompleted = status === 'completed';
-  
-  return (
-    <TouchableOpacity 
-      activeOpacity={0.8} 
-      onPress={isLocked ? null : onPress} 
-      style={[styles.nodeContainer, style]}
-    >
-      <View style={[
-        styles.outerCircle, 
-        isLocked && styles.lockedOuterCircle,
-        isCurrent && { borderColor: COLORS.primary }
-      ]}>
-        
-        {/* 4 MINI-GAME PROGRESS SEGMENTS (The 4 Dots) */}
-        <View style={styles.segmentContainer}>
-            {/* Segment 1: Word Sounds | Segment 2: Object ID */}
-            {/* Segment 3: Syllable Splash | Segment 4: Spellcraft */}
-            {[1, 2, 3, 4].map((dot) => (
-                <View 
-                    key={dot} 
-                    style={[
-                        styles.progressDot, 
-                        { backgroundColor: isCompleted ? '#FFD700' : '#E0E0E0' } 
-                    ]} 
-                />
-            ))}
+const GameCard = ({ title, icon, color, onPress }) => (
+    <TouchableOpacity style={styles.gameCard} onPress={onPress}>
+        <View style={[styles.gameIconCircle, { backgroundColor: color + '20' }]}>
+            <Ionicons name={icon} size={30} color={color} />
         </View>
-
-        {/* INNER LEVEL CIRCLE */}
-        <View style={[
-            styles.innerCircle, 
-            { backgroundColor: isLocked ? '#BDBDBD' : isCurrent ? COLORS.primary : COLORS.success }
-        ]}>
-          {isLocked ? (
-            <Ionicons name="lock-closed" size={30} color="white" />
-          ) : (
-            <Text style={styles.levelNumber}>{level}</Text>
-          )}
-        </View>
-      </View>
-      
-      <Text style={[styles.nodeLabel, isLocked && { color: '#90A4AE' }]}>
-        LEVEL {level}
-      </Text>
+        <Text style={styles.gameCardTitle}>{title}</Text>
+        <Ionicons name="chevron-forward" size={20} color="#B0BEC5" />
     </TouchableOpacity>
-  );
-};
+);
 
-const StudentHome = ({ navigation }) => {
-  const [userData, setUserData] = useState({ name: 'Champion', points: 0, level: 1 });
+const StudentHome = () => {
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  // 1. FETCH REAL STUDENT RECORD FROM DATABASE
   useEffect(() => {
-    const fetchStudentData = async () => {
-      try {
-        const response = await API.get('/user'); // Fetch logged in user
-        setUserData(response.data);
-      } catch (error) {
-        console.log("Using local data (Login Bypassed)");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStudentData();
+    API.get('/user').then(res => {
+      setUser(res.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
-  // 2. GENERATE THE 10 LEVELS LOGIC
-  const levelsData = Array.from({ length: 10 }, (_, i) => {
-    const currentLvl = i + 1;
-    let status = 'locked';
-    if (currentLvl < userData.level) status = 'completed';
-    else if (currentLvl === userData.level) status = 'current';
-    return { id: currentLvl, status };
-  });
+  const openLevel = (lvlId) => {
+    setSelectedLevel(lvlId);
+    setModalVisible(true);
+  };
 
-  if (loading) {
-    return (
-        <View style={styles.loader}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-        </View>
-    );
-  }
+  if (loading) return <ActivityIndicator style={{flex:1}} color={COLORS.primary} />;
 
-return (
+  const levelsData = Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    status: (i + 1) < user?.level ? 'completed' : (i + 1) === user?.level ? 'current' : 'locked'
+  }));
+
+  return (
     <View style={styles.container}>
-      {/* 1. STATUS BAR CONFIG (Makes system icons white) */}
       <StatusBar barStyle="light-content" />
-
-      {/* 2. THE IMPROVED HEADER */}
       <LinearGradient colors={[COLORS.primary, '#64B5F6']} style={styles.header}>
           <View style={styles.headerContent}>
             <View>
-              <Text style={styles.greeting}>Hi, {userData.name}! 🏆</Text>
-              <Text style={styles.subGreeting}>Level {userData.level} Explorer</Text>
+              <Text style={styles.greeting}>Hi, {user?.name || 'Champ'}! 🏆</Text>
+              <Text style={styles.subGreeting}>Level {user?.level} Explorer</Text>
             </View>
             <View style={styles.statsBadge}>
-              <Text style={styles.statText}>✨ {userData.points} pts</Text>
+              <Text style={styles.statText}>✨ {user?.points || 0} pts</Text>
             </View>
           </View>
       </LinearGradient>
 
-
-      {/* GAME MAP (GRASS THEME) */}
-      <ScrollView 
-        style={styles.mapScroll} 
-        contentContainerStyle={styles.mapContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <ImageBackground 
-            source={{ uri: 'https://www.transparenttextures.com/patterns/p6.png' }} // Subtle grass-like texture
-            style={styles.grassBg}
-        >
-          {levelsData.map((lvl, index) => {
-            // ZIG-ZAG SNAKE PATTERN LOGIC
-            let marginSide = 0;
-            if (index % 4 === 1) marginSide = 90;   // Move Right
-            if (index % 4 === 2) marginSide = 0;    // Center
-            if (index % 4 === 3) marginSide = -90;  // Move Left
-
-            return (
-              <LevelNode 
-                key={lvl.id}
-                level={lvl.id}
-                status={lvl.status}
-                onPress={() => alert(`Level ${lvl.id}: Choose a Game!`)}
-                style={{ marginLeft: marginSide }}
-              />
-            );
-          })}
-          
-          {/* Footer space to see the last level clearly above the tabs */}
-          <View style={{ height: 120 }} /> 
-        </ImageBackground>
+      <ScrollView contentContainerStyle={styles.mapContent}>
+          {levelsData.map((lvl, index) => (
+              <TouchableOpacity 
+                key={lvl.id} 
+                onPress={() => lvl.status !== 'locked' && openLevel(lvl.id)}
+                style={[styles.node, { marginLeft: index % 4 === 1 ? 90 : index % 4 === 3 ? -90 : 0 }]}
+              >
+                <View style={[styles.outerCircle, lvl.status === 'locked' && { borderColor: '#ECEFF1' }]}>
+                    <View style={[styles.innerCircle, { backgroundColor: lvl.status === 'locked' ? '#BDBDBD' : lvl.status === 'current' ? COLORS.primary : COLORS.success }]}>
+                        {lvl.status === 'locked' ? <Ionicons name="lock-closed" size={30} color="white" /> : <Text style={styles.levelNumber}>{lvl.id}</Text>}
+                    </View>
+                </View>
+                <Text style={styles.nodeLabel}>LEVEL {lvl.id}</Text>
+              </TouchableOpacity>
+          ))}
+          <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* --- GAME SELECTION MODAL --- */}
+      <Modal animationType="slide" transparent={true} visible={modalVisible}>
+          <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Level {selectedLevel} Games</Text>
+                      <TouchableOpacity onPress={() => setModalVisible(false)}>
+                          <Ionicons name="close-circle" size={30} color="#CFD8DC" />
+                      </TouchableOpacity>
+                  </View>
+                  
+                  <Text style={styles.modalSubtitle}>Pick a challenge to earn XP! ✨</Text>
+
+                  <GameCard title="Word Sounds" icon="volume-high" color={COLORS.primary} onPress={() => alert("Game 1 Start")} />
+                  <GameCard title="Object Identification" icon="search" color={COLORS.success} onPress={() => alert("Game 2 Start")} />
+                  <GameCard title="Syllable Splash" icon="water" color="#FFB300" onPress={() => alert("Game 3 Start")} />
+                  <GameCard title="Spellcraft Puzzle" icon="extension-puzzle" color="#FF7043" onPress={() => alert("Game 4 Start")} />
+              </View>
+          </View>
+      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F8E9' },
-  
-  header: {
-    // This adds space for the status bar on Android and extra padding for iOS
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 60,
-    paddingHorizontal: 20,
-    paddingBottom: 25,
-    borderBottomLeftRadius: 35,
-    borderBottomRightRadius: 35,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-  },
-  headerContent: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    // Removed paddingTop from here to use header padding instead
-  },
-  greeting: { 
-    color: 'white', 
-    fontSize: 26, 
-    fontWeight: '900',
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2
-  },
-  statText: { color: 'white', fontWeight: '900', fontSize: 16 },
+  header: { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 15 : 60, paddingHorizontal: 20, paddingBottom: 25, borderBottomLeftRadius: 35, borderBottomRightRadius: 35, elevation: 10 },
+  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  greeting: { color: 'white', fontSize: 26, fontWeight: '900' },
+  subGreeting: { color: 'white', opacity: 0.8, fontWeight: 'bold' },
+  statsBadge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
+  statText: { color: 'white', fontWeight: 'bold' },
+  mapContent: { paddingTop: 40, alignItems: 'center' },
+  node: { alignItems: 'center', marginBottom: 40 },
+  outerCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', borderWidth: 5, borderColor: '#C8E6C9', elevation: 5 },
+  innerCircle: { width: 75, height: 75, borderRadius: 37.5, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 6, borderBottomColor: 'rgba(0,0,0,0.1)' },
+  levelNumber: { color: 'white', fontSize: 30, fontWeight: '900' },
+  nodeLabel: { marginTop: 8, fontWeight: '900', color: '#2E7D32', fontSize: 10 },
 
-  mapScroll: { flex: 1 },
-  mapContent: { paddingTop: 40 },
-  grassBg: { width: width, alignItems: 'center' },
-
-  nodeContainer: { alignItems: 'center', marginBottom: 45 },
-  outerCircle: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 6,
-    borderColor: '#C8E6C9',
-    elevation: 6,
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  lockedOuterCircle: { borderColor: '#ECEFF1' },
-  
-  // The 4 dots inside the circle representing the 4 mini-games
-  segmentContainer: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    padding: 12,
-    zIndex: 0
-  },
-  progressDot: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#E0E0E0', borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
-
-  innerCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderBottomWidth: 8, // The Duolingo 3D "clicky" look
-    borderBottomColor: 'rgba(0,0,0,0.15)',
-    zIndex: 1,
-  },
-  levelNumber: { color: 'white', fontSize: 36, fontWeight: '900', textShadowColor: 'rgba(0, 0, 0, 0.2)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 2 },
-  nodeLabel: { marginTop: 12, fontWeight: '900', color: '#388E3C', fontSize: 12, letterSpacing: 1 },
+  // MODAL STYLES
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 30, height: height * 0.7 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+  modalTitle: { fontSize: 28, fontWeight: '900', color: '#455A64' },
+  modalSubtitle: { fontSize: 16, color: '#90A4AE', fontWeight: 'bold', marginBottom: 25 },
+  gameCard: { backgroundColor: '#F7F7F7', padding: 15, borderRadius: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 2, borderColor: '#ECEFF1' },
+  gameIconCircle: { width: 55, height: 55, borderRadius: 15, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  gameCardTitle: { flex: 1, fontSize: 18, fontWeight: 'bold', color: '#546E7A' }
 });
 
 export default StudentHome;

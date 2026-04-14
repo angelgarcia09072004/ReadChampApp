@@ -32,7 +32,6 @@ const LoginScreen = ({ navigation }) => {
 
     setLoading(true);
     try {
-      // 1. We send the selectedRole ('student', 'parent', or 'teacher')
       const response = await API.post('/login', {
         email: email,
         password: password,
@@ -44,7 +43,6 @@ const LoginScreen = ({ navigation }) => {
         
         // 2. Navigate based on the role the DATABASE says you are
         if (user.role === 'student') navigation.replace('MainTabs');
-        else if (user.role === 'parent') navigation.replace('ParentTabs');
         else if (user.role === 'teacher') navigation.replace('TeacherTabs');
       }
     } catch (error) {
@@ -52,7 +50,7 @@ const LoginScreen = ({ navigation }) => {
         // This is the error you are seeing in the screenshot
         setErrors({ email: "Credentials do not match our records." });
       } else {
-        Alert.alert("Error", "Network problem. Check Laravel!");
+        Alert.alert("Error", "Network problem. Please Try Again!");
       }
     } finally {
       setLoading(false);
@@ -75,7 +73,7 @@ const LoginScreen = ({ navigation }) => {
               
               <Text style={styles.labelCenter}>I AM A:</Text>
               <View style={styles.roleContainer}>
-                {['student', 'parent', 'teacher'].map((role) => (
+                {['student', 'teacher'].map((role) => (
                   <TouchableOpacity 
                     key={role}
                     style={[styles.roleButton, selectedRole === role && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}

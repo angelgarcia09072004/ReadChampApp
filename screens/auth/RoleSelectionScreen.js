@@ -28,14 +28,6 @@ const RoleSelectionScreen = ({ navigation }) => {
             color={COLORS.primary}
             onPress={() => navigation.navigate('Register', { role: 'student' })}
           />
-
-          <RoleCard 
-            emoji="👪" 
-            title="Parent" 
-            color={COLORS.success}
-            onPress={() => navigation.navigate('Register', { role: 'parent' })}
-          />
-
           <RoleCard 
             emoji="👩‍🏫" 
             title="Teacher" 
