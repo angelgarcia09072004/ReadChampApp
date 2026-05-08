@@ -108,23 +108,32 @@ const LessonScreen = ({ route, navigation }) => {
     </View>
   );
 
-  // ... (Identify, Syllable, Spell functions remain the same as before) ...
   const RenderIdentify = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Who makes this sound? 🔊</Text>
-      <TouchableOpacity style={styles.audioPlayer} onPress={() => speak(currentLesson.id.sound)}>
+      
+      {/* THIS BUTTON NOW TRIGGERS THE AI VOICE */}
+      <TouchableOpacity 
+        style={styles.audioPlayer} 
+        onPress={() => speak(currentLesson.id.correct)} 
+      >
           <Ionicons name="volume-high" size={50} color="#1CB0F6" />
           <Text style={styles.audioText}>PLAY SOUND</Text>
       </TouchableOpacity>
+
       <View style={styles.choiceGrid}>
           {currentLesson.id.options.map((item, i) => (
-              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}>
+              <TouchableOpacity 
+                key={i} 
+                style={styles.choiceCard} 
+                onPress={() => handleAnswer(item.n === currentLesson.id.correct)}
+              >
                   <Text style={{fontSize: 45}}>{item.e}</Text>
               </TouchableOpacity>
           ))}
       </View>
     </View>
-  );
+  )
 
   const RenderSyllable = () => (
     <View style={styles.gameBox}>
