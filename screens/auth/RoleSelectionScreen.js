@@ -1,43 +1,88 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  StatusBar, 
+  Dimensions, 
+  Platform 
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
 
-const RoleCard = ({ emoji, title, color, onPress }) => (
-  <TouchableOpacity style={[styles.card, { borderColor: color }]} onPress={onPress}>
-    <Text style={styles.emoji}>{emoji}</Text>
-    <Text style={styles.cardTitle}>{title}</Text>
-    <Text style={styles.arrow}>➔</Text>
+const { width } = Dimensions.get('window');
+
+// --- Premium Role Card Component ---
+const RoleCard = ({ icon, title, description, accentColor, onPress }) => (
+  <TouchableOpacity 
+    activeOpacity={0.7} 
+    style={[styles.card, { borderColor: accentColor + '30' }]} 
+    onPress={onPress}
+  >
+    {/* Subtle Accent Glow */}
+    <View style={[styles.iconContainer, { backgroundColor: accentColor + '15' }]}>
+        <Ionicons name={icon} size={28} color={accentColor} />
+    </View>
+
+    <View style={styles.textContainer}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardDescription}>{description}</Text>
+    </View>
+
+    <Ionicons name="chevron-forward" size={20} color="#CFD8DC" />
   </TouchableOpacity>
 );
 
 const RoleSelectionScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
+      <StatusBar barStyle="dark-content" />
       
+      {/* 1. PRESERVED PASTEL BACKGROUND */}
+      <LinearGradient 
+        colors={['#E1F5FE', '#FCE4EC']} 
+        style={StyleSheet.absoluteFill} 
+      />
+
       <SafeAreaView style={styles.safeArea}>
-        {/* CENTERED CONTENT BOX */}
-        <View style={styles.centerContainer}>
-          <Text style={styles.headerTitle}>Join the Team! ✨</Text>
-          <Text style={styles.headerSubtitle}>Choose your role to sign up</Text>
+        <View style={styles.content}>
+          
+          {/* 2. HEADER SECTION */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Join the Team!</Text>
+            <Text style={styles.subtitle}>Choose your role to sign up</Text>
+          </View>
 
-          <RoleCard 
-            emoji="🧒" 
-            title="Student" 
-            color={COLORS.primary}
-            onPress={() => navigation.navigate('Register', { role: 'student' })}
-          />
-          <RoleCard 
-            emoji="👩‍🏫" 
-            title="Teacher" 
-            color="#FFB300" 
-            onPress={() => navigation.navigate('Register', { role: 'teacher' })}
-          />
+          {/* 3. CARDS SECTION */}
+          <View style={styles.cardsWrapper}>
+            <RoleCard 
+                icon="school-outline"
+                title="Student"
+                description="I am ready to learn and play"
+                accentColor="#1CB0F6" // Modern Blue
+                onPress={() => navigation.navigate('Register', { role: 'student' })}
+            />
 
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.backLink}>Go Back</Text>
+            <RoleCard 
+                icon="person-outline"
+                title="Teacher"
+                description="I want to manage my classroom"
+                accentColor="#FFA000" // Warm Gold
+                onPress={() => navigation.navigate('Register', { role: 'teacher' })}
+            />
+          </View>
+
+          {/* 4. FOOTER SECTION */}
+          <TouchableOpacity 
+            style={styles.backButton} 
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={styles.backButtonText}>GO BACK</Text>
           </TouchableOpacity>
+
         </View>
       </SafeAreaView>
     </View>
@@ -45,30 +90,90 @@ const RoleSelectionScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, justifyContent: 'center' }, // Centering logic
-  centerContainer: { paddingHorizontal: 30, alignItems: 'center' },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: COLORS.primary, marginBottom: 5 },
-  headerSubtitle: { fontSize: 16, color: '#78909C', fontWeight: 'bold', marginBottom: 40 },
+  container: { 
+    flex: 1 
+  },
+  safeArea: { 
+    flex: 1 
+  },
+  content: { 
+    flex: 1, 
+    justifyContent: 'center', // Centers content vertically
+    paddingHorizontal: 30 
+  },
+
+  // TYPOGRAPHY
+  header: { 
+    marginBottom: 50, 
+    alignItems: 'center' 
+  },
+  title: { 
+    fontSize: 34, 
+    fontWeight: '900', 
+    color: '#263238', 
+    letterSpacing: -0.5,
+    marginBottom: 8
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: '#78909C', 
+    fontWeight: '600' 
+  },
+
+  // CARD STYLING
+  cardsWrapper: { 
+    gap: 20 
+  },
   card: {
-    backgroundColor: 'white',
-    width: '100%',
-    padding: 20,
-    borderRadius: 25,
-    borderWidth: 3,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
-    elevation: 4,
+    padding: 24,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    // Soft Premium Shadows
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
   },
-  emoji: { fontSize: 35, marginRight: 20 },
-  cardTitle: { fontSize: 24, fontWeight: 'bold', color: '#455A64', flex: 1 },
-  arrow: { fontSize: 20, color: COLORS.primary, fontWeight: 'bold' },
-  backLink: { marginTop: 30, color: COLORS.primary, fontWeight: '900', fontSize: 14, textTransform: 'uppercase' }
+  iconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  textContainer: {
+    flex: 1,
+    marginLeft: 20,
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#455A64',
+    marginBottom: 4
+  },
+  cardDescription: {
+    fontSize: 12,
+    color: '#90A4AE',
+    fontWeight: 'bold',
+  },
+
+  // FOOTER
+  backButton: {
+    marginTop: 60,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20
+  },
+  backButtonText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#B0BEC5',
+    letterSpacing: 2
+  }
 });
 
 export default RoleSelectionScreen;

@@ -13,14 +13,22 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "ReadChamp needs access to the microphone to check your pronunciation.",
+        "NSSpeechRecognitionUsageDescription": "ReadChamp needs to convert your speech into text to help you learn."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ],
       "package": "com.neu_garcia_angelanne.ReadChampApp"
     },
     "web": {

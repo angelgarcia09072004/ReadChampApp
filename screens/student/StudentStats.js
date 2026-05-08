@@ -3,137 +3,117 @@ import {
   View, 
   Text, 
   StyleSheet, 
-  ScrollView, 
   SafeAreaView, 
+  ScrollView, 
   StatusBar, 
   Platform, 
   Dimensions,
   ActivityIndicator
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
 import API from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
-// --- Reusable Stat Card Component ---
-const StatCard = ({ title, value, icon, color }) => (
-  <View style={styles.statCard}>
-    <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
-      <Ionicons name={icon} size={24} color={color} />
-    </View>
-    <Text style={styles.statValue}>{value}</Text>
-    <Text style={styles.statLabel}>{title}</Text>
-  </View>
-);
-
 const StudentStats = () => {
-  const [userData, setUserData] = useState(null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 1. FETCH REAL RECORD FROM DATABASE
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await API.get('/user');
-        setUserData(response.data);
-      } catch (error) {
-        console.log("Error loading stats, using mock data for UI preview.");
-        // Fallback for UI testing if server is off
-        setUserData({ name: "Champion", points: 0, level: 1 });
-      } finally {
+    API.get('/user')
+      .then(res => {
+        setUser(res.data);
         setLoading(false);
-      }
-    };
-    fetchStats();
+      })
+      .catch(() => {
+        console.log("Using mock stats for preview");
+        setUser({ name: "Angel Garcia", points: 320, level: 5 });
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={styles.loader}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
-  // 2. LOGIC FOR PROGRESS BAR (Points needed for next level)
-  // Example: Every 100 points is a new level
-  const progressPercent = (userData.points % 100) + "%";
+  // Calculate progress based on points (Example: 1000 XP per level)
+  const progressPercent = Math.min((user.points / 1000) * 100, 100);
 
   return (
     <View style={styles.container}>
-      {/* STATUS BAR FIX */}
       <StatusBar barStyle="dark-content" />
       
-      {/* PREMIUM BACKGROUND GRADIENT */}
-      <LinearGradient 
-        colors={['#E1F5FE', '#FCE4EC']} 
-        style={StyleSheet.absoluteFill} 
-      />
+      {/* 1. BACKGROUND GRADIENT */}
+      <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
 
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView 
-            contentContainerStyle={styles.scrollContent} 
-            showsVerticalScrollIndicator={false}
-        >
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
           
           <Text style={styles.headerTitle}>My Progress 📈</Text>
 
-          {/* 3. REAL LEVEL & XP CARD (Glassmorphism Effect) */}
-          <View style={styles.glassCard}>
-            <View style={styles.levelRow}>
-              <Text style={styles.levelText}>Level {userData.level} Student</Text>
-              <Text style={styles.xpText}>{userData.points} XP</Text>
+          {/* 2. MAIN PROFILE CARD (Same as Teacher View) */}
+          <View style={styles.profileCard}>
+            <View style={styles.avatarLarge}>
+              <Text style={{ fontSize: 60 }}>🧒</Text>
             </View>
-            
-            {/* PROGRESS BAR CONNECTED TO POINTS */}
-            <View style={styles.progressBarContainer}>
-                <View style={styles.progressBarBackground}>
-                    <View style={[styles.progressBarFill, { width: progressPercent }]} /> 
-                </View>
+            <Text style={styles.studentName}>{user.name ? user.name.toUpperCase() : "CHAMPION"}</Text>
+            <View style={styles.chipRow}>
+              <View style={[styles.chip, { backgroundColor: COLORS.primary }]}>
+                <Text style={styles.chipText}>LEVEL {user.level}</Text>
+              </View>
+              <View style={[styles.chip, { backgroundColor: COLORS.success }]}>
+                <Text style={styles.chipText}>ACTIVE READER</Text>
+              </View>
             </View>
-            
-            <Text style={styles.milestoneText}>✨ Great job, {userData.name}! Keep it up!</Text>
           </View>
 
-          {/* 4. STATS GRID (2x2) */}
-          <View style={styles.grid}>
-            <StatCard title="Total Points" value={userData.points} icon="star" color="#FFB300" />
-            <StatCard title="Current Level" value={userData.level} icon="trophy" color={COLORS.primary} />
-            <StatCard title="Day Streak" value="1 Day" icon="flame" color="#FF7043" />
-            <StatCard title="Badges" value="0" icon="ribbon" color={COLORS.success} />
+          {/* 3. PROGRESS SECTION */}
+          <Text style={styles.sectionLabel}>LEVEL GOAL 🚀</Text>
+          <View style={styles.card}>
+            <View style={styles.xpRow}>
+              <Text style={styles.xpTitle}>Next Level Progress</Text>
+              <Text style={styles.xpValue}>{user.points} XP</Text>
+            </View>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+            </View>
+            <Text style={styles.xpSubtitle}>Keep going! You are doing great!</Text>
+          </View>
+
+          {/* 4. STATS GRID */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <Ionicons name="star" size={30} color="#FFD700" />
+              <Text style={styles.statNumber}>{user.points}</Text>
+              <Text style={styles.statDesc}>Total XP</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Ionicons name="flame" size={30} color="#FF7043" />
+              <Text style={styles.statNumber}>5</Text>
+              <Text style={styles.statDesc}>Day Streak</Text>
+            </View>
           </View>
 
           {/* 5. ACHIEVEMENTS SECTION */}
-          <Text style={styles.sectionTitle}>My Badges 🏆</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.badgeRow}
-          >
-            {[
-              { name: 'First Win', icon: 'ribbon', color: '#FFD700' },
-              { name: 'Perfect Score', icon: 'checkmark-circle', color: COLORS.primary },
-              { name: '5-Day Streak', icon: 'flame', color: '#FF7043' },
-              { name: 'Fast Learner', icon: 'flash', color: COLORS.success },
-            ].map((badge, i) => (
-              <View key={i} style={styles.badgeItem}>
-                <View style={styles.badgeCircle}>
-                   {/* If points < 10, badges look locked (gray) */}
-                   <Ionicons 
-                        name={badge.icon} 
-                        size={32} 
-                        color={userData.points > 10 ? badge.color : "#CFD8DC"} 
-                    />
+          <Text style={styles.sectionLabel}>MY BADGES 🏆</Text>
+          <View style={styles.badgesCard}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {['ribbon', 'medal', 'school', 'rocket', 'star'].map((icon, index) => (
+                <View key={index} style={styles.badgeCircle}>
+                  <MaterialCommunityIcons name={icon} size={35} color={COLORS.primary} />
                 </View>
-                <Text style={styles.badgeLabel}>{badge.name}</Text>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </ScrollView>
+          </View>
 
+          {/* Padding for bottom tabs */}
           <View style={{ height: 100 }} />
-
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -142,105 +122,53 @@ const StudentStats = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F8E9' },
-  safeArea: { 
-    flex: 1, 
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0 
-  },
-  scrollContent: { padding: 20 },
+  loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  safeArea: { flex: 1 },
+  scrollPadding: { padding: 25 },
   headerTitle: { 
-    fontSize: 34, 
+    fontSize: 32, 
     fontWeight: '900', 
-    color: COLORS.primary, 
-    marginBottom: 25,
+    color: COLORS.text, 
+    marginBottom: 20,
+    marginTop: Platform.OS === 'android' ? StatusBar.currentHeight : 10 
   },
-  glassCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-    borderRadius: 30,
-    padding: 25,
-    marginBottom: 25,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    elevation: 10,
-    shadowColor: '#000', 
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1, 
-    shadowRadius: 20,
-  },
-  levelRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    width: '100%', 
-    marginBottom: 12 
-  },
-  levelText: { fontWeight: '900', color: '#455A64', fontSize: 20 },
-  xpText: { fontWeight: 'bold', color: '#78909C', fontSize: 16 },
-  
-  progressBarContainer: {
-    width: '100%',
-    height: 14,
-    marginVertical: 5,
-  },
-  progressBarBackground: {
-    flex: 1,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 10,
-  },
-  milestoneText: { 
-    marginTop: 12, 
-    fontSize: 13, 
-    color: '#78909C', 
-    fontWeight: 'bold',
-    textAlign: 'center' 
-  },
-  grid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    justifyContent: 'space-between' 
-  },
-  statCard: {
-    backgroundColor: 'white',
-    width: '47%',
-    padding: 20,
-    borderRadius: 25,
-    marginBottom: 15,
-    alignItems: 'center',
-    elevation: 4,
-  },
-  iconCircle: { 
-    width: 54, height: 54, borderRadius: 27, 
-    justifyContent: 'center', alignItems: 'center', marginBottom: 12 
-  },
-  statValue: { fontSize: 20, fontWeight: '900', color: '#455A64' },
-  statLabel: { fontSize: 12, fontWeight: '900', color: '#B0BEC5' },
 
-  sectionTitle: { 
-    fontSize: 24, 
-    fontWeight: '900', 
-    color: '#455A64', 
-    marginTop: 15, 
-    marginBottom: 20 
+  profileCard: { 
+    backgroundColor: 'white', 
+    borderRadius: 35, 
+    padding: 30, 
+    alignItems: 'center', 
+    elevation: 8,
+    shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10,
+    marginBottom: 25
   },
-  badgeRow: { flexDirection: 'row' },
-  badgeItem: { alignItems: 'center', marginRight: 22 },
-  badgeCircle: { 
-    width: 80, height: 80, borderRadius: 40, 
-    backgroundColor: 'white', justifyContent: 'center', 
-    alignItems: 'center', elevation: 3,
+  avatarLarge: { 
+    width: 110, height: 110, borderRadius: 55, 
+    backgroundColor: '#F5F5F5', justifyContent: 'center', 
+    alignItems: 'center', marginBottom: 15,
+    borderWidth: 5, borderColor: '#E1F5FE'
   },
-  badgeLabel: { 
-    marginTop: 10, 
-    fontSize: 12, 
-    fontWeight: 'bold', 
-    color: '#90A4AE',
-    textAlign: 'center' 
-  }
+  studentName: { fontSize: 22, fontWeight: '900', color: COLORS.text, marginBottom: 10, textAlign: 'center' },
+  chipRow: { flexDirection: 'row', gap: 10 },
+  chip: { paddingHorizontal: 15, paddingVertical: 6, borderRadius: 20 },
+  chipText: { color: 'white', fontWeight: 'bold', fontSize: 11 },
+
+  sectionLabel: { fontSize: 13, fontWeight: '900', color: '#90A4AE', marginBottom: 15, letterSpacing: 1 },
+  card: { backgroundColor: 'white', borderRadius: 25, padding: 20, elevation: 4, marginBottom: 25 },
+  xpRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  xpTitle: { fontWeight: 'bold', color: COLORS.text },
+  xpValue: { fontWeight: '900', color: COLORS.primary },
+  progressBarBg: { height: 14, backgroundColor: '#F0F0F0', borderRadius: 7, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: COLORS.success, borderRadius: 7 },
+  xpSubtitle: { marginTop: 10, fontSize: 11, color: '#B0BEC5', fontWeight: 'bold', textAlign: 'center' },
+
+  statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  statBox: { backgroundColor: 'white', width: '47%', padding: 20, borderRadius: 25, alignItems: 'center', elevation: 4 },
+  statNumber: { fontSize: 22, fontWeight: '900', color: COLORS.text, marginTop: 5 },
+  statDesc: { fontSize: 11, fontWeight: 'bold', color: '#B0BEC5' },
+
+  badgesCard: { backgroundColor: 'white', borderRadius: 25, padding: 20, elevation: 4, marginBottom: 25 },
+  badgeCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
 });
 
 export default StudentStats;

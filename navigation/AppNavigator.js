@@ -8,6 +8,8 @@ import RoleSelectionScreen from '../screens/auth/RoleSelectionScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import StudentDetail from '../screens/teacher/StudentDetail';
+import RoomDetail from '../screens/teacher/RoomDetail';
+import LessonScreen from '../screens/student/LessonScreen';
 
 // Role Navigators
 import MainTabs from './MainTabs';       // For Students
@@ -28,6 +30,8 @@ function AppNavigator() {
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="TeacherTabs" component={TeacherTabs} />
         <Stack.Screen name="StudentDetail" component={StudentDetail} />
+        <Stack.Screen name="RoomDetail" component={RoomDetail} />
+        <Stack.Screen name="LessonScreen" component={LessonScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
