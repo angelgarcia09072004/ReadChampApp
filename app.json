@@ -3,39 +3,33 @@
     "name": "ReadChampApp",
     "slug": "ReadChampApp",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
+    "newArchEnabled": false,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "ReadChamp needs access to the microphone to check your pronunciation.",
-        "NSSpeechRecognitionUsageDescription": "ReadChamp needs to convert your speech into text to help you learn."
-      }
+      "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS"
       ],
       "package": "com.neu_garcia_angelanne.ReadChampApp"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Allow ReadChamp to check your reading pronunciation."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "2.0.20"
+          }
+        }
+      ]
     ]
   }
 }

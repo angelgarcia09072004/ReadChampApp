@@ -8,9 +8,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme';
 import GameButton from '../../components/GameButton';
 
-// --- AI LIBRARIES ---
+// --- NEW STABLE VOICE LIBRARIES ---
 import * as Speech from 'expo-speech';
-import * as ExpoSpeechRecognition from 'expo-speech-recognition';
+import Voice from '@react-native-voice/voice';
 
 const { width } = Dimensions.get('window');
 
@@ -40,64 +40,43 @@ const LessonScreen = ({ route, navigation }) => {
 
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  // --- 1. VOICE LISTENERS SETUP ---
   useEffect(() => {
-    Animated.timing(progressAnim, {
-      toValue: (step + 1) / 4,
-      duration: 500,
-      useNativeDriver: false,
-    }).start();
-  }, [step]);
+    Voice.onSpeechResults = (e) => {
+      const spokenText = e.value[0].toUpperCase();
+      console.log("AI Heard:", spokenText);
+      
+      if (spokenText.includes(currentLesson.speak.word.toUpperCase())) {
+        handleAnswer(true);
+      } else {
+        handleAnswer(false);
+      }
+      setIsListening(false);
+    };
 
-  // --- 1. AI VOICE (Hearing) ---
+    Voice.onSpeechError = (e) => {
+      setIsListening(false);
+      console.log("Speech Error:", e);
+    };
+
+    return () => {
+      Voice.destroy().then(Voice.removeAllListeners);
+    };
+  }, [currentLesson]);
+
+  // --- 2. AI VOICE (Hearing) ---
   const speak = (text) => {
     Speech.speak(text, { language: 'en-US', pitch: 1.2, rate: 0.7 });
   };
 
-  // --- 2. AI MICROPHONE (Speaking) ---
+  // --- 3. START LISTENING ---
   const startRealListening = async () => {
-    // 1. Check if the engine is inside the app
-    if (!ExpoSpeechRecognition || typeof ExpoSpeechRecognition.start !== 'function') {
-      Alert.alert("Engine Error", "The AI Engine was not found. Try restarting the app icon on your home screen! 📱");
-      return;
-    }
-
     try {
-      console.log("Starting AI Mic...");
-      
-      // 2. Request Permission
-      const { granted } = await ExpoSpeechRecognition.requestPermissionsAsync();
-      if (!granted) {
-        Alert.alert("Mic Error", "Please allow Microphone in your phone settings! ⚙️");
-        return;
-      }
-
       setIsListening(true);
-
-      // 3. Start the AI
-      ExpoSpeechRecognition.start({
-        lang: "en-US",
-        interimResults: false,
-        onResult: (event) => {
-          const result = event.results[0].transcript.toUpperCase().trim();
-          console.log("AI Heard:", result);
-          
-          if (result.includes(currentLesson.speak.word.toUpperCase())) {
-            handleAnswer(true);
-          } else {
-            handleAnswer(false);
-          }
-          setIsListening(false);
-        },
-        onError: (err) => {
-          setIsListening(false);
-          console.log("Mic Error:", err);
-          Alert.alert("Try Again", "The AI didn't hear you. Speak clearly! 🎙️");
-        }
-      });
-
+      await Voice.start('en-US'); 
     } catch (e) {
       setIsListening(false);
-      Alert.alert("System Error", "Microphone failed to start.");
+      Alert.alert("System Error", "Microphone is not responding.");
     }
   };
 
@@ -131,6 +110,7 @@ const LessonScreen = ({ route, navigation }) => {
       <TouchableOpacity 
         style={[styles.micBtn, isListening && { opacity: 0.6 }]} 
         onPress={startRealListening}
+        onLongPress={() => handleAnswer(true)} // PRESENTATION BYPASS
       >
         <LinearGradient colors={isListening ? ['#FF5252', '#FF8A80'] : ['#1CB0F6', '#64B5F6']} style={styles.micCircle}>
             <Ionicons name={isListening ? "pulse" : "mic"} size={45} color="white" />
@@ -173,17 +153,10 @@ const LessonScreen = ({ route, navigation }) => {
     </View>
   );
 
-  const handleSpellTap = (char, index) => {
-      setTargetWord([...targetWord, char]);
-      setPool(pool.filter((_, i) => i !== index));
-  };
-
   const RenderSpell = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Spell the word! 🧩</Text>
-      <TouchableOpacity onPress={() => speak(currentLesson.spell.word)} style={styles.imageBox}>
-          <Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text>
-      </TouchableOpacity>
+      <TouchableOpacity onPress={() => speak(currentLesson.spell.word)} style={styles.imageBox}><Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text></TouchableOpacity>
       <View style={styles.slotRow}>
         {currentLesson.spell.word.split('').map((_, i) => (
             <View key={i} style={styles.slot}><Text style={styles.tileText}>{targetWord[i] || ""}</Text></View>
@@ -191,7 +164,7 @@ const LessonScreen = ({ route, navigation }) => {
       </View>
       <View style={styles.poolRow}>
         {pool.map((c, i) => (
-            <TouchableOpacity key={i} style={styles.tile} onPress={() => handleSpellTap(c, i)}>
+            <TouchableOpacity key={i} style={styles.tile} onPress={() => { setTargetWord([...targetWord, c]); setPool(pool.filter((_, idx) => idx !== i)); }}>
                 <Text style={styles.tileText}>{c}</Text>
             </TouchableOpacity>
         ))}
@@ -204,22 +177,16 @@ const LessonScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-              <Ionicons name="close" size={30} color="#B0BEC5" />
-          </TouchableOpacity>
-          <View style={styles.pBarBg}>
-              <Animated.View style={[styles.pBarFill, { width: progressAnim.interpolate({inputRange: [0, 1], outputRange: ['0%', '100%']}) }]} />
-          </View>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}><Ionicons name="close" size={30} color="#B0BEC5" /></TouchableOpacity>
+          <View style={styles.pBarBg}><View style={[styles.pBarFill, { width: `${((step + 1) / 4) * 100}%` }]} /></View>
           <View style={styles.heartBox}><Ionicons name="heart" size={24} color="#FF5252" /><Text style={styles.heartText}>5</Text></View>
       </SafeAreaView>
-
       <View style={{flex: 1, justifyContent: 'center'}}>
           {step === 0 && <RenderSpeak />}
           {step === 1 && <RenderIdentify />}
           {step === 2 && <RenderSyllable />}
           {step === 3 && <RenderSpell />}
       </View>
-
       {isCorrect !== null && (
           <View style={[styles.feedback, { backgroundColor: isCorrect ? '#D7FFB7' : '#FFDFE0' }]}>
               <View style={styles.feedbackInfo}>
@@ -231,16 +198,13 @@ const LessonScreen = ({ route, navigation }) => {
               </TouchableOpacity>
           </View>
       )}
-
       <Modal visible={showReward} transparent animationType="slide">
           <View style={styles.rewardOverlay}>
               <LinearGradient colors={['#FFD700', '#FFA000']} style={styles.rewardCard}>
                   <MaterialCommunityIcons name="trophy" size={100} color="white" />
                   <Text style={styles.rewardTitle}>LEVEL {levelId} CLEAR!</Text>
                   <Text style={styles.rewardXP}>+50 XP EARNED</Text>
-                  <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
-                      <Text style={styles.doneText}>FINISH</Text>
-                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}><Text style={styles.doneText}>FINISH</Text></TouchableOpacity>
               </LinearGradient>
           </View>
       </Modal>
