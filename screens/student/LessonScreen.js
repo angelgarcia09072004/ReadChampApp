@@ -8,15 +8,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme';
 import GameButton from '../../components/GameButton';
 
-// --- REAL AI LIBRARIES ---
+// --- AI LIBRARIES ---
 import * as Speech from 'expo-speech';
-import { ExpoSpeechRecognition } from 'expo-speech-recognition';
+import * as ExpoSpeechRecognition from 'expo-speech-recognition';
 
 const { width } = Dimensions.get('window');
 
 const LESSON_DATA = {
   1: { speak: { word: "CAT", emoji: "🐱" }, id: { sound: "Meow", options: [{e:'🐷', n:'PIG'}, {e:'🐱', n:'CAT'}, {e:'🐶', n:'DOG'}], correct: 'CAT' }, syllable: { word: "CAT", count: 1 }, spell: { word: "CAT", pool: ['T', 'A', 'C'], emoji: "🐱" } },
-  // ... (Add other levels here)
+  2: { speak: { word: "PIN", emoji: "📍" }, id: { sound: "Pop!", options: [{e:'📍', n:'PIN'}, {e:'📦', n:'BOX'}, {e:'☀️', n:'SUN'}], correct: 'PIN' }, syllable: { word: "SIT", count: 1 }, spell: { word: "BIN", pool: ['I', 'B', 'N'], emoji: "🗑️" } },
+  3: { speak: { word: "DOG", emoji: "🐶" }, id: { sound: "Bark!", options: [{e:'🐶', n:'DOG'}, {e:'🐱', n:'CAT'}, {e:'🐔', n:'HEN'}], correct: 'DOG' }, syllable: { word: "LOG", count: 1 }, spell: { word: "FROG", pool: ['O', 'F', 'G', 'R'], emoji: "🐸" } },
+  4: { speak: { word: "SUN", emoji: "☀️" }, id: { sound: "Rain", options: [{e:'☀️', n:'SUN'}, {e:'🌧️', n:'RAIN'}, {e:'💨', n:'WIND'}], correct: 'SUN' }, syllable: { word: "BUN", count: 1 }, spell: { word: "BUG", pool: ['G', 'U', 'B'], emoji: "🐞" } },
+  5: { speak: { word: "SHIP", emoji: "🚢" }, id: { sound: "Waves", options: [{e:'🚢', n:'SHIP'}, {e:'🚗', n:'CAR'}, {e:'✈️', n:'PLANE'}], correct: 'SHIP' }, syllable: { word: "FISH", count: 1 }, spell: { word: "FISH", pool: ['S', 'I', 'F', 'H'], emoji: "🐟" } },
+  6: { speak: { word: "STAR", emoji: "⭐" }, id: { sound: "Twinkle", options: [{e:'⭐', n:'STAR'}, {e:'🌙', n:'MOON'}, {e:'☀️', n:'SUN'}], correct: 'STAR' }, syllable: { word: "STOP", count: 1 }, spell: { word: "SLIDE", pool: ['L', 'S', 'D', 'I', 'E'], emoji: "🛝" } },
+  7: { speak: { word: "APPLE", emoji: "🍎" }, id: { sound: "Crunch", options: [{e:'🍎', n:'APPLE'}, {e:'🍌', n:'BANANA'}, {e:'🍊', n:'ORANGE'}], correct: 'APPLE' }, syllable: { word: "AP-PLE", count: 2 }, spell: { word: "PAPER", pool: ['P', 'E', 'P', 'A', 'R'], emoji: "📄" } },
+  8: { speak: { word: "SUNSET", emoji: "🌇" }, id: { sound: "Chirp", options: [{e:'🌇', n:'SUNSET'}, {e:'🌃', n:'NIGHT'}, {e:'🌅', n:'MORNING'}], correct: 'SUNSET' }, syllable: { word: "SUN-SET", count: 2 }, spell: { word: "BEDROOM", pool: ['B','E','D','R','O','O','M'], emoji: "🛏️" } },
+  9: { speak: { word: "THE BIG RED BUS", emoji: "🚌" }, id: { sound: "Honk!", options: [{e:'🚌', n:'BUS'}, {e:'🚗', n:'CAR'}, {e:'🚲', n:'BIKE'}], correct: 'BUS' }, syllable: { word: "YEL-LOW", count: 2 }, spell: { word: "SAID", pool: ['D', 'I', 'A', 'S'], emoji: "💬" } },
+  10: { speak: { word: "I LOVE SCHOOL", emoji: "🏫" }, id: { sound: "Bell", options: [{e:'🏫', n:'SCHOOL'}, {e:'🏠', n:'HOUSE'}, {e:'🌳', n:'PARK'}], correct: 'SCHOOL' }, syllable: { word: "READ-ING", count: 2 }, spell: { word: "CHAMPION", pool: ['C','H','A','M','P','I','O','N'], emoji: "🏆" } }
 };
 
 const LessonScreen = ({ route, navigation }) => {
@@ -32,44 +40,65 @@ const LessonScreen = ({ route, navigation }) => {
 
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // --- 1. REAL AI VOICE (Hearing) ---
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: (step + 1) / 4,
+      duration: 500,
+      useNativeDriver: false,
+    }).start();
+  }, [step]);
+
+  // --- 1. AI VOICE (Hearing) ---
   const speak = (text) => {
-    Speech.speak(text, {
-      language: 'en-US',
-      pitch: 1.2,
-      rate: 0.7, // Slower for kids
-    });
+    Speech.speak(text, { language: 'en-US', pitch: 1.2, rate: 0.7 });
   };
 
-  // --- 2. REAL SPEECH RECOGNITION (Speaking) ---
+  // --- 2. AI MICROPHONE (Speaking) ---
   const startRealListening = async () => {
-    const { granted } = await ExpoSpeechRecognition.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert("Mic Error", "Please allow microphone access!");
+    // 1. Check if the engine is inside the app
+    if (!ExpoSpeechRecognition || typeof ExpoSpeechRecognition.start !== 'function') {
+      Alert.alert("Engine Error", "The AI Engine was not found. Try restarting the app icon on your home screen! 📱");
       return;
     }
 
-    setIsListening(true);
-    
-    ExpoSpeechRecognition.start({
-      lang: "en-US",
-      interimResults: false,
-      onResult: (event) => {
-        const result = event.results[0].transcript.toUpperCase().trim();
-        console.log("AI Heard:", result);
-        
-        if (result.includes(currentLesson.speak.word)) {
-          handleAnswer(true);
-        } else {
-          handleAnswer(false);
-        }
-        setIsListening(false);
-      },
-      onError: (err) => {
-        setIsListening(false);
-        console.log("Speech Error:", err);
+    try {
+      console.log("Starting AI Mic...");
+      
+      // 2. Request Permission
+      const { granted } = await ExpoSpeechRecognition.requestPermissionsAsync();
+      if (!granted) {
+        Alert.alert("Mic Error", "Please allow Microphone in your phone settings! ⚙️");
+        return;
       }
-    });
+
+      setIsListening(true);
+
+      // 3. Start the AI
+      ExpoSpeechRecognition.start({
+        lang: "en-US",
+        interimResults: false,
+        onResult: (event) => {
+          const result = event.results[0].transcript.toUpperCase().trim();
+          console.log("AI Heard:", result);
+          
+          if (result.includes(currentLesson.speak.word.toUpperCase())) {
+            handleAnswer(true);
+          } else {
+            handleAnswer(false);
+          }
+          setIsListening(false);
+        },
+        onError: (err) => {
+          setIsListening(false);
+          console.log("Mic Error:", err);
+          Alert.alert("Try Again", "The AI didn't hear you. Speak clearly! 🎙️");
+        }
+      });
+
+    } catch (e) {
+      setIsListening(false);
+      Alert.alert("System Error", "Microphone failed to start.");
+    }
   };
 
   const handleAnswer = (answer) => {
@@ -96,44 +125,37 @@ const LessonScreen = ({ route, navigation }) => {
       <TouchableOpacity style={styles.mainCard} onPress={() => speak(currentLesson.speak.word)}>
           <Text style={{fontSize: 80}}>{currentLesson.speak.emoji}</Text>
           <Text style={styles.bigWord}>{currentLesson.speak.word}</Text>
-          <Text style={{color: COLORS.primary, fontWeight: 'bold'}}>Tap to Hear AI Voice</Text>
+          <Text style={{color: COLORS.primary, fontWeight: 'bold', fontSize: 12}}>Tap to Hear AI Voice</Text>
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.micBtn} onPress={startRealListening}>
+      <TouchableOpacity 
+        style={[styles.micBtn, isListening && { opacity: 0.6 }]} 
+        onPress={startRealListening}
+      >
         <LinearGradient colors={isListening ? ['#FF5252', '#FF8A80'] : ['#1CB0F6', '#64B5F6']} style={styles.micCircle}>
             <Ionicons name={isListening ? "pulse" : "mic"} size={45} color="white" />
         </LinearGradient>
       </TouchableOpacity>
-      <Text style={styles.hintText}>{isListening ? "Listening..." : "Tap to Speak"}</Text>
+      <Text style={styles.hintText}>{isListening ? "Listening... Speak Now!" : "Tap to Speak"}</Text>
     </View>
   );
 
   const RenderIdentify = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Who makes this sound? 🔊</Text>
-      
-      {/* THIS BUTTON NOW TRIGGERS THE AI VOICE */}
-      <TouchableOpacity 
-        style={styles.audioPlayer} 
-        onPress={() => speak(currentLesson.id.correct)} 
-      >
+      <TouchableOpacity style={styles.audioPlayer} onPress={() => speak(currentLesson.id.sound)}>
           <Ionicons name="volume-high" size={50} color="#1CB0F6" />
           <Text style={styles.audioText}>PLAY SOUND</Text>
       </TouchableOpacity>
-
       <View style={styles.choiceGrid}>
           {currentLesson.id.options.map((item, i) => (
-              <TouchableOpacity 
-                key={i} 
-                style={styles.choiceCard} 
-                onPress={() => handleAnswer(item.n === currentLesson.id.correct)}
-              >
+              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}>
                   <Text style={{fontSize: 45}}>{item.e}</Text>
               </TouchableOpacity>
           ))}
       </View>
     </View>
-  )
+  );
 
   const RenderSyllable = () => (
     <View style={styles.gameBox}>
@@ -159,7 +181,9 @@ const LessonScreen = ({ route, navigation }) => {
   const RenderSpell = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Spell the word! 🧩</Text>
-      <View style={styles.imageBox}><Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text></View>
+      <TouchableOpacity onPress={() => speak(currentLesson.spell.word)} style={styles.imageBox}>
+          <Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text>
+      </TouchableOpacity>
       <View style={styles.slotRow}>
         {currentLesson.spell.word.split('').map((_, i) => (
             <View key={i} style={styles.slot}><Text style={styles.tileText}>{targetWord[i] || ""}</Text></View>
