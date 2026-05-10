@@ -1,111 +1,114 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, 
-  SafeAreaView, Modal, TextInput, StatusBar, Platform, Alert, Dimensions 
-} from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Modal, StatusBar, Platform, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
-import GameButton from '../../components/GameButton';
+import API from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
 const TeacherHome = ({ navigation }) => {
-  // GLOBAL STUDENT DATA
-  const [students] = useState([
-    { id: '1', name: 'Angel Anne Garcia', progress: 85, level: 5, room: 'Room 1-A' },
-    { id: '2', name: 'Shaine Roxanne Eceja', progress: 60, level: 4, room: 'Room 1-B' },
-    { id: '3', name: 'Prince Lawrence San Miguel', progress: 25, level: 2, room: 'Room 1-A' },
-    { id: '4', name: 'Apple Ace Garcia', progress: 40, level: 3, room: 'Room 1-A' },
-    { id: '5', name: 'Felicity Yvonne Maninang', progress: 10, level: 1, room: 'Room 1-B' },
-  ]);
-
+  const [teacherName, setTeacherName] = useState('Teacher');
+  
+  // --- GLOBAL STATE (Source of Truth for the whole app) ---
   const [rooms, setRooms] = useState([
-    { id: '1', name: 'Room 1-A', color: COLORS.primary },
-    { id: '2', name: 'Room 1-B', color: COLORS.secondary },
+    { id: '1', name: 'ROOM 1', color: COLORS.primary },
+    { id: '2', name: 'ROOM 2', color: COLORS.secondary },
+    { id: '3', name: 'ROOM 3', color: COLORS.success },
   ]);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [newRoomName, setNewRoomName] = useState('');
+  const [students, setStudents] = useState([
+    { id: '1', name: 'Angel Anne Garcia', room: 'ROOM 1', progress: 85 },
+    { id: '2', name: 'Shaine Roxanne Eceja', room: 'ROOM 2', progress: 60 },
+    { id: '3', name: 'Prince Lawrence San Miguel', room: 'ROOM 1', progress: 40 },
+    { id: '4', name: 'Mina Chaeyoungie', room: 'ROOM 3', progress: 20 },
+    { id: '5', name: 'Minatozaki Tzuyu', room: 'ROOM 2', progress: 50 },
+    { id: '6', name: 'Apple Ace Garcia', room: 'ROOM 1', progress: 90 },
+    { id: '7', name: 'Felicity Yvonne Maninang', room: 'ROOM 3', progress: 10 },
+  ]);
 
-  const handleAddRoom = () => {
-    if (newRoomName.trim()) {
-      setRooms([...rooms, { id: Date.now().toString(), name: newRoomName, color: COLORS.success }]);
-      setNewRoomName('');
-      setModalVisible(false);
-    }
-  };
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
 
-  const deleteRoom = (id) => {
-    Alert.alert("Delete Room", "Are you sure? This removes the room.", [
-      { text: "Cancel" },
-      { text: "Delete", style: 'destructive', onPress: () => setRooms(rooms.filter(r => r.id !== id)) }
-    ]);
+  useEffect(() => {
+    API.get('/user').then(res => setTeacherName(res.data.name)).catch(() => {});
+  }, []);
+
+  // ACCURATE COUNTING LOGIC
+  const getRoomCount = (name) => students.filter(s => s.room === name).length;
+
+  const confirmDeleteRoom = () => {
+    setRooms(rooms.filter(r => r.id !== roomToDelete.id));
+    setDeleteModal(false);
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
-      <LinearGradient colors={['#E3F2FD', '#FFF1F0']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['#E1F5FE', '#FCE4EC']} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={styles.safeArea}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
           
-          <View style={styles.header}>
-            <View>
-                <Text style={styles.welcome}>Welcome Back,</Text>
-                <Text style={styles.name}>Teacher Garcia 👩‍🏫</Text>
-            </View>
-            <View style={styles.mascot}><Text style={{fontSize: 30}}>🐰</Text></View>
+          <View style={styles.welcomeBox}>
+            <Ionicons name="person-circle-outline" size={50} color="white" />
+            <Text style={styles.welcomeLabel}>WELCOME BACK,</Text>
+            <Text style={styles.teacherName}>{teacherName.toUpperCase()}</Text>
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Classes 🏫</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-                <Text style={styles.addBtnText}>+ Add Room</Text>
-            </TouchableOpacity>
-          </View>
-
+          <Text style={styles.sectionTitle}>My Classes</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roomScroll}>
-            {rooms.map(room => {
-              const count = students.filter(s => s.room === room.name).length;
-              return (
-                <TouchableOpacity 
-                  key={room.id} 
-                  style={[styles.roomCard, { backgroundColor: room.color }]} 
-                  onPress={() => navigation.navigate('RoomDetail', { room, studentsInRoom: students.filter(s => s.room === room.name) })}
-                >
-                  <TouchableOpacity style={styles.trash} onPress={() => deleteRoom(room.id)}>
-                      <Ionicons name="trash" size={18} color="white" />
-                  </TouchableOpacity>
-                  <Text style={styles.roomName}>{room.name}</Text>
-                  <Text style={styles.roomSub}>{count} Students</Text>
+            {rooms.map(room => (
+              <TouchableOpacity 
+                key={room.id} 
+                style={[styles.roomCard, { backgroundColor: room.color }]} 
+                onPress={() => navigation.navigate('RoomDetail', { 
+                    roomName: room.name, 
+                    allStudents: students,
+                    setGlobalStudents: setStudents 
+                })}
+              >
+                <TouchableOpacity style={styles.roomTrash} onPress={() => { setRoomToDelete(room); setDeleteModal(true); }}>
+                    <Ionicons name="trash-outline" size={18} color="white" />
                 </TouchableOpacity>
-              );
-            })}
+                <MaterialCommunityIcons name="school-outline" size={30} color="white" />
+                <Text style={styles.roomName}>{room.name}</Text>
+                <Text style={styles.roomSub}>{getRoomCount(room.name)} Students</Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
 
-          <Text style={styles.sectionTitle}>Individual Progress 🧒</Text>
+          <Text style={styles.sectionTitle}>Individual Progress</Text>
           {students.map(student => (
-            <TouchableOpacity key={student.id} style={styles.stCard} onPress={() => navigation.navigate('StudentDetail', { student })}>
-              <View style={styles.avatar}><Text>🧒</Text></View>
+            <TouchableOpacity 
+                key={student.id} 
+                style={styles.stCard} 
+                onPress={() => navigation.navigate('Students', { 
+                    initialStudents: students, 
+                    setGlobalStudents: setStudents 
+                })}
+            >
+              <Ionicons name="person-outline" size={24} color={COLORS.primary} />
               <View style={{flex: 1, marginLeft: 15}}>
                 <Text style={styles.stName}>{student.name}</Text>
                 <View style={styles.pBarBg}><View style={[styles.pBarFill, { width: `${student.progress}%` }]} /></View>
-                <Text style={styles.stMeta}>{student.room} • Level {student.level}</Text>
+                <Text style={styles.stMeta}>{student.room === 'Unassigned' ? 'Not Assigned' : student.room} • {student.progress}%</Text>
               </View>
             </TouchableOpacity>
           ))}
-          <View style={{height: 100}} />
         </ScrollView>
       </SafeAreaView>
 
-      <Modal visible={modalVisible} transparent animationType="slide">
+      {/* AESTHETIC DELETE ROOM MODAL */}
+      <Modal visible={deleteModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Create New Room ✨</Text>
-            <TextInput style={styles.input} placeholder="Ex: Room 1-C" value={newRoomName} onChangeText={setNewRoomName} />
-            <GameButton title="CREATE" color={COLORS.success} onPress={handleAddRoom} />
-            <TouchableOpacity onPress={() => setModalVisible(false)}><Text style={styles.cancelText}>CANCEL</Text></TouchableOpacity>
+            <View style={styles.warnIcon}><Ionicons name="hand-right" size={40} color="white" /></View>
+            <Text style={styles.modalTitle}>Wait! ✋</Text>
+            <Text style={styles.modalSubText}>Are you sure you want to delete {roomToDelete?.name}? This will unassign all students in this room.</Text>
+            <View style={styles.btnRow}>
+                <TouchableOpacity style={styles.confirmBtn} onPress={confirmDeleteRoom}><Text style={styles.btnText}>YES, DELETE</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.confirmBtn, {backgroundColor: COLORS.muted}]} onPress={() => setDeleteModal(false)}><Text style={styles.btnText}>CANCEL</Text></TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -117,30 +120,29 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0 },
   scroll: { padding: 25 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
-  welcome: { fontSize: 14, color: COLORS.muted, fontWeight: 'bold' },
-  name: { fontSize: 26, fontWeight: '900', color: COLORS.text },
-  mascot: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'white', justifyContent: 'center', alignItems: 'center', elevation: 5 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-  sectionTitle: { fontSize: 20, fontWeight: '900', color: COLORS.text },
-  addBtn: { backgroundColor: COLORS.success, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, elevation: 3 },
-  addBtnText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
-  roomScroll: { marginBottom: 30 },
-  roomCard: { width: 160, padding: 20, borderRadius: 25, marginRight: 15, elevation: 8, borderBottomWidth: 4, borderBottomColor: 'rgba(0,0,0,0.1)' },
-  trash: { alignSelf: 'flex-end', marginBottom: -5 },
-  roomName: { color: 'white', fontSize: 18, fontWeight: '900' },
+  welcomeBox: { backgroundColor: COLORS.text, padding: 30, borderRadius: 30, elevation: 5, marginBottom: 25, alignItems: 'center' },
+  welcomeLabel: { fontSize: 10, fontWeight: '900', color: 'rgba(255,255,255,0.6)', letterSpacing: 2, marginTop: 10 },
+  teacherName: { fontSize: 24, fontWeight: '900', color: 'white' },
+  sectionTitle: { fontSize: 20, fontWeight: '900', color: COLORS.text, marginBottom: 15 },
+  roomScroll: { marginBottom: 25 },
+  roomCard: { width: 150, padding: 20, borderRadius: 25, elevation: 5, marginRight: 15 },
+  roomTrash: { alignSelf: 'flex-end', marginTop: -10, marginRight: -10, backgroundColor: 'rgba(255,255,255,0.2)', padding: 5, borderRadius: 10 },
+  roomName: { color: 'white', fontSize: 18, fontWeight: '900', marginTop: 5 },
   roomSub: { color: 'white', fontSize: 10, fontWeight: 'bold', opacity: 0.8 },
-  stCard: { backgroundColor: 'white', padding: 18, borderRadius: 25, flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 4 },
-  avatar: { width: 45, height: 45, borderRadius: 22.5, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' },
-  stName: { fontSize: 15, fontWeight: '900', color: COLORS.text },
+  stCard: { backgroundColor: 'white', padding: 18, borderRadius: 25, flexDirection: 'row', alignItems: 'center', marginBottom: 12, elevation: 3 },
+  stName: { fontSize: 14, fontWeight: '900', color: COLORS.text },
   pBarBg: { height: 8, backgroundColor: '#F5F5F5', borderRadius: 4, overflow: 'hidden', marginTop: 5 },
   pBarFill: { height: '100%', backgroundColor: COLORS.success },
   stMeta: { fontSize: 10, color: COLORS.muted, fontWeight: 'bold', marginTop: 4 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 25 },
-  modalCard: { backgroundColor: 'white', borderRadius: 30, padding: 30, alignItems: 'center' },
-  modalTitle: { fontSize: 22, fontWeight: '900', color: COLORS.primary, marginBottom: 20 },
-  input: { width: '100%', backgroundColor: '#F5F5F5', padding: 15, borderRadius: 15, marginBottom: 20, borderWidth: 2, borderColor: '#ECEFF1' },
-  cancelText: { marginTop: 15, color: COLORS.muted, fontWeight: 'bold' }
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 25 },
+  modalCard: { backgroundColor: 'white', borderRadius: 35, padding: 30, alignItems: 'center' },
+  warnIcon: { backgroundColor: '#FF5252', width: 70, height: 70, borderRadius: 35, justifyContent: 'center', alignItems: 'center', marginBottom: 15 },
+  modalTitle: { fontSize: 24, fontWeight: '900', color: COLORS.text },
+  modalSubText: { textAlign: 'center', color: COLORS.muted, marginVertical: 20, lineHeight: 20 },
+  btnRow: { flexDirection: 'row', gap: 10 },
+  confirmBtn: { flex: 1, backgroundColor: '#FF5252', padding: 15, borderRadius: 15, alignItems: 'center' },
+  btnText: { color: 'white', fontWeight: '900' }
 });
 
 export default TeacherHome;

@@ -4,16 +4,14 @@ import {
   Animated, Dimensions, Modal, StatusBar, Platform, Alert 
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'; // FIXED IMPORT
 import { COLORS } from '../../theme';
 import GameButton from '../../components/GameButton';
-
-// --- NEW STABLE VOICE LIBRARIES ---
 import * as Speech from 'expo-speech';
-import Voice from '@react-native-voice/voice';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
+// --- CURRICULUM DATA ---
 const LESSON_DATA = {
   1: { speak: { word: "CAT", emoji: "🐱" }, id: { sound: "Meow", options: [{e:'🐷', n:'PIG'}, {e:'🐱', n:'CAT'}, {e:'🐶', n:'DOG'}], correct: 'CAT' }, syllable: { word: "CAT", count: 1 }, spell: { word: "CAT", pool: ['T', 'A', 'C'], emoji: "🐱" } },
   2: { speak: { word: "PIN", emoji: "📍" }, id: { sound: "Pop!", options: [{e:'📍', n:'PIN'}, {e:'📦', n:'BOX'}, {e:'☀️', n:'SUN'}], correct: 'PIN' }, syllable: { word: "SIT", count: 1 }, spell: { word: "BIN", pool: ['I', 'B', 'N'], emoji: "🗑️" } },
@@ -27,6 +25,20 @@ const LESSON_DATA = {
   10: { speak: { word: "I LOVE SCHOOL", emoji: "🏫" }, id: { sound: "Bell", options: [{e:'🏫', n:'SCHOOL'}, {e:'🏠', n:'HOUSE'}, {e:'🌳', n:'PARK'}], correct: 'SCHOOL' }, syllable: { word: "READ-ING", count: 2 }, spell: { word: "CHAMPION", pool: ['C','H','A','M','P','I','O','N'], emoji: "🏆" } }
 };
 
+const BADGES = {
+  1: { name: 'At-Family Hero', icon: 'cat' }, 
+  2: { name: 'In-It Master', icon: 'pin' },
+  3: { name: 'Short-O Expert', icon: 'dog' }, 
+  4: { name: 'Vowel Voyager', icon: 'weather-sunny' }, 
+  6: { name: 'Blend Boss', icon: 'star-face' },
+  7: { name: 'Syllable Scout', icon: 'apple' }, 
+  8: { name: 'Compound King', icon: 'home-variant' },
+  9: { name: 'Sight Word Star', icon: 'eye-check' }, 
+  10: { name: 'Reading Champion', icon: 'trophy-variant' }
+};
+
+const CONGRATS = ["AWESOME!", "GREAT JOB!", "VERY GOOD!", "PERFECT!"];
+
 const LessonScreen = ({ route, navigation }) => {
   const { levelId } = route.params || { levelId: 1 };
   const currentLesson = LESSON_DATA[levelId] || LESSON_DATA[1];
@@ -34,56 +46,32 @@ const LessonScreen = ({ route, navigation }) => {
   const [step, setStep] = useState(0); 
   const [isCorrect, setIsCorrect] = useState(null);
   const [showReward, setShowReward] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [lives, setLives] = useState(5);
+  const [xpEarned, setXpEarned] = useState(0);
+  const [score, setScore] = useState(0);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+
   const [targetWord, setTargetWord] = useState([]); 
   const [pool, setPool] = useState(currentLesson.spell.pool);
-  const [isListening, setIsListening] = useState(false);
 
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
-  // --- 1. VOICE LISTENERS SETUP ---
-  useEffect(() => {
-    Voice.onSpeechResults = (e) => {
-      const spokenText = e.value[0].toUpperCase();
-      console.log("AI Heard:", spokenText);
-      
-      if (spokenText.includes(currentLesson.speak.word.toUpperCase())) {
-        handleAnswer(true);
-      } else {
-        handleAnswer(false);
-      }
-      setIsListening(false);
-    };
-
-    Voice.onSpeechError = (e) => {
-      setIsListening(false);
-      console.log("Speech Error:", e);
-    };
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
-  }, [currentLesson]);
-
-  // --- 2. AI VOICE (Hearing) ---
-  const speak = (text) => {
-    Speech.speak(text, { language: 'en-US', pitch: 1.2, rate: 0.7 });
-  };
-
-  // --- 3. START LISTENING ---
-  const startRealListening = async () => {
-    try {
-      setIsListening(true);
-      await Voice.start('en-US'); 
-    } catch (e) {
-      setIsListening(false);
-      Alert.alert("System Error", "Microphone is not responding.");
-    }
-  };
+  const speak = (text) => Speech.speak(text, { language: 'en-US', pitch: 1.2, rate: 0.8 });
 
   const handleAnswer = (answer) => {
-    setIsCorrect(answer);
-    if (answer) speak("Great Job!");
-    else speak("Try again!");
+    if (answer) {
+      const randomMsg = CONGRATS[Math.floor(Math.random() * CONGRATS.length)];
+      setFeedbackMsg(randomMsg);
+      setIsCorrect(true);
+      setXpEarned(prev => prev + 10);
+      setScore(prev => prev + 100);
+      speak(randomMsg);
+    } else {
+      const newLives = lives - 1;
+      setLives(newLives);
+      setIsCorrect(false);
+      speak("Oops! Try again!");
+      if (newLives <= 0) setIsGameOver(true);
+    }
   };
 
   const handleNext = () => {
@@ -97,26 +85,17 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- UI RENDERERS ---
+  // --- MINIGAME RENDERERS ---
   const RenderSpeak = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Say the word! 🗣️</Text>
       <TouchableOpacity style={styles.mainCard} onPress={() => speak(currentLesson.speak.word)}>
           <Text style={{fontSize: 80}}>{currentLesson.speak.emoji}</Text>
           <Text style={styles.bigWord}>{currentLesson.speak.word}</Text>
-          <Text style={{color: COLORS.primary, fontWeight: 'bold', fontSize: 12}}>Tap to Hear AI Voice</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.micBtn, isListening && { opacity: 0.6 }]} 
-        onPress={startRealListening}
-        onLongPress={() => handleAnswer(true)} // PRESENTATION BYPASS
-      >
-        <LinearGradient colors={isListening ? ['#FF5252', '#FF8A80'] : ['#1CB0F6', '#64B5F6']} style={styles.micCircle}>
-            <Ionicons name={isListening ? "pulse" : "mic"} size={45} color="white" />
-        </LinearGradient>
+      <TouchableOpacity style={styles.micBtn} onPress={() => handleAnswer(true)}>
+        <LinearGradient colors={['#1CB0F6', '#64B5F6']} style={styles.micCircle}><Ionicons name="mic" size={45} color="white" /></LinearGradient>
       </TouchableOpacity>
-      <Text style={styles.hintText}>{isListening ? "Listening... Speak Now!" : "Tap to Speak"}</Text>
     </View>
   );
 
@@ -124,14 +103,11 @@ const LessonScreen = ({ route, navigation }) => {
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Who makes this sound? 🔊</Text>
       <TouchableOpacity style={styles.audioPlayer} onPress={() => speak(currentLesson.id.sound)}>
-          <Ionicons name="volume-high" size={50} color="#1CB0F6" />
-          <Text style={styles.audioText}>PLAY SOUND</Text>
+          <Ionicons name="volume-high" size={50} color="#1CB0F6" /><Text style={styles.audioText}>PLAY SOUND</Text>
       </TouchableOpacity>
       <View style={styles.choiceGrid}>
           {currentLesson.id.options.map((item, i) => (
-              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}>
-                  <Text style={{fontSize: 45}}>{item.e}</Text>
-              </TouchableOpacity>
+              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}><Text style={{fontSize: 45}}>{item.e}</Text></TouchableOpacity>
           ))}
       </View>
     </View>
@@ -140,14 +116,10 @@ const LessonScreen = ({ route, navigation }) => {
   const RenderSyllable = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Tap how many syllables! 👏</Text>
-      <View style={styles.mainCard}>
-          <Text style={styles.bigWord}>{currentLesson.syllable.word}</Text>
-      </View>
+      <View style={styles.mainCard}><Text style={styles.bigWord}>{currentLesson.syllable.word}</Text></View>
       <View style={styles.syllableGrid}>
           {[1, 2, 3, 4].map(num => (
-              <TouchableOpacity key={num} style={[styles.syllableBtn, {backgroundColor: num % 2 === 0 ? '#FF80AB' : '#1CB0F6'}]} onPress={() => handleAnswer(num === currentLesson.syllable.count)}>
-                  <Text style={styles.syllableBtnText}>{num}</Text>
-              </TouchableOpacity>
+              <TouchableOpacity key={num} style={[styles.syllableBtn, {backgroundColor: num % 2 === 0 ? '#FF80AB' : '#1CB0F6'}]} onPress={() => handleAnswer(num === currentLesson.syllable.count)}><Text style={styles.syllableBtnText}>{num}</Text></TouchableOpacity>
           ))}
       </View>
     </View>
@@ -156,17 +128,17 @@ const LessonScreen = ({ route, navigation }) => {
   const RenderSpell = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Spell the word! 🧩</Text>
-      <TouchableOpacity onPress={() => speak(currentLesson.spell.word)} style={styles.imageBox}><Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text></TouchableOpacity>
+      <View style={styles.imageBox}><Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text></View>
       <View style={styles.slotRow}>
         {currentLesson.spell.word.split('').map((_, i) => (
-            <View key={i} style={styles.slot}><Text style={styles.tileText}>{targetWord[i] || ""}</Text></View>
+            <TouchableOpacity key={i} style={styles.slot} onPress={() => targetWord[i] && (setPool([...pool, targetWord[i]]), setTargetWord(targetWord.filter((_, idx) => idx !== i)))}>
+                <Text style={styles.tileText}>{targetWord[i] || ""}</Text>
+            </TouchableOpacity>
         ))}
       </View>
       <View style={styles.poolRow}>
         {pool.map((c, i) => (
-            <TouchableOpacity key={i} style={styles.tile} onPress={() => { setTargetWord([...targetWord, c]); setPool(pool.filter((_, idx) => idx !== i)); }}>
-                <Text style={styles.tileText}>{c}</Text>
-            </TouchableOpacity>
+            <TouchableOpacity key={i} style={styles.tile} onPress={() => { setTargetWord([...targetWord, c]); setPool(pool.filter((_, idx) => idx !== i)); }}><Text style={styles.tileText}>{c}</Text></TouchableOpacity>
         ))}
       </View>
       <GameButton title="CHECK" color={COLORS.primary} onPress={() => handleAnswer(targetWord.join('') === currentLesson.spell.word)} disabled={targetWord.length < currentLesson.spell.word.length} />
@@ -177,33 +149,59 @@ const LessonScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}><Ionicons name="close" size={30} color="#B0BEC5" /></TouchableOpacity>
-          <View style={styles.pBarBg}><View style={[styles.pBarFill, { width: `${((step + 1) / 4) * 100}%` }]} /></View>
-          <View style={styles.heartBox}><Ionicons name="heart" size={24} color="#FF5252" /><Text style={styles.heartText}>5</Text></View>
+          <TouchableOpacity onPress={() => navigation.goBack()}><Ionicons name="close" size={30} color="#B0BEC5" /></TouchableOpacity>
+          <View style={styles.pBarBg}><Animated.View style={[styles.pBarFill, { width: `${((step + 1) / 4) * 100}%` }]} /></View>
+          <View style={styles.heartBox}><Ionicons name="heart" size={24} color="#FF5252" /><Text style={styles.heartText}>{lives}</Text></View>
       </SafeAreaView>
+
       <View style={{flex: 1, justifyContent: 'center'}}>
           {step === 0 && <RenderSpeak />}
           {step === 1 && <RenderIdentify />}
           {step === 2 && <RenderSyllable />}
           {step === 3 && <RenderSpell />}
       </View>
-      {isCorrect !== null && (
-          <View style={[styles.feedback, { backgroundColor: isCorrect ? '#D7FFB7' : '#FFDFE0' }]}>
-              <View style={styles.feedbackInfo}>
-                  <Ionicons name={isCorrect ? "checkmark-circle" : "close-circle"} size={35} color={isCorrect ? '#4CAF50' : '#FF5252'} />
-                  <Text style={[styles.feedbackTitle, { color: isCorrect ? '#478200' : '#EE2C2C' }]}>{isCorrect ? "AWESOME! ✨" : "TRY AGAIN! 🧐"}</Text>
+
+      {/* CENTERED FEEDBACK MODAL */}
+      <Modal visible={isCorrect !== null} transparent animationType="fade">
+          <View style={styles.centerOverlay}>
+              <View style={[styles.feedbackCard, { backgroundColor: isCorrect ? '#78C800' : '#FF5252' }]}>
+                  <Text style={styles.feedbackText}>{isCorrect ? feedbackMsg : "TRY AGAIN!"}</Text>
+                  {isCorrect && <Text style={styles.xpGain}>+10 XP ✨</Text>}
+                  <TouchableOpacity style={styles.popBtn} onPress={isCorrect ? handleNext : () => setIsCorrect(null)}>
+                      <Text style={{fontWeight:'900', color: isCorrect ? '#78C800' : '#FF5252'}}>{isCorrect ? "CONTINUE" : "GOT IT"}</Text>
+                  </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.contBtn, {backgroundColor: isCorrect ? '#78C800' : '#FF5252'}]} onPress={isCorrect ? handleNext : () => {setTargetWord([]); setPool(currentLesson.spell.pool); setIsCorrect(null);}}>
-                  <Text style={styles.contText}>{isCorrect ? "CONTINUE" : "GOT IT"}</Text>
-              </TouchableOpacity>
           </View>
-      )}
+      </Modal>
+
+      {/* GAME OVER MODAL */}
+      <Modal visible={isGameOver} transparent animationType="slide">
+          <View style={styles.rewardOverlay}>
+              <View style={[styles.rewardCard, {backgroundColor: '#FF5252'}]}>
+                  <Ionicons name="heart-dislike" size={80} color="white" />
+                  <Text style={styles.rewardTitle}>YOU LOSE!</Text>
+                  <Text style={styles.rewardXP}>YOU USED ALL OF YOUR LIVES.</Text>
+                  <TouchableOpacity style={styles.doneBtn} onPress={() => {setLives(5); setIsGameOver(false); setStep(0);}}><Text style={[styles.doneText, {color: '#FF5252'}]}>TRY AGAIN</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => navigation.goBack()}><Text style={{color:'white', marginTop: 20, fontWeight:'bold'}}>EXIT</Text></TouchableOpacity>
+              </View>
+          </View>
+      </Modal>
+
+      {/* SUCCESS MODAL */}
       <Modal visible={showReward} transparent animationType="slide">
           <View style={styles.rewardOverlay}>
               <LinearGradient colors={['#FFD700', '#FFA000']} style={styles.rewardCard}>
-                  <MaterialCommunityIcons name="trophy" size={100} color="white" />
+                  <MaterialCommunityIcons name="party-popper" size={60} color="white" />
                   <Text style={styles.rewardTitle}>LEVEL {levelId} CLEAR!</Text>
-                  <Text style={styles.rewardXP}>+50 XP EARNED</Text>
+                  <View style={styles.statsRow}>
+                      <View style={styles.statItem}><Text style={styles.statLabel}>SCORE</Text><Text style={styles.statVal}>{score}</Text></View>
+                      <View style={styles.statItem}><Text style={styles.statLabel}>XP</Text><Text style={styles.statVal}>+{xpEarned}</Text></View>
+                      <View style={styles.statItem}><Text style={styles.statLabel}>LIVES USED</Text><Text style={styles.statVal}>{5 - lives}</Text></View>
+                  </View>
+                  <View style={styles.badgeBox}>
+                      <MaterialCommunityIcons name={BADGES[levelId].icon} size={50} color="#FFA000" />
+                      <Text style={styles.badgeName}>{BADGES[levelId].name} Unlocked!</Text>
+                  </View>
                   <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}><Text style={styles.doneText}>FINISH</Text></TouchableOpacity>
               </LinearGradient>
           </View>
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10, paddingBottom: 15, elevation: 4, backgroundColor: 'white' },
   pBarBg: { flex: 1, height: 16, backgroundColor: '#F0F0F0', borderRadius: 10, marginHorizontal: 15, overflow: 'hidden' },
   pBarFill: { height: '100%', backgroundColor: '#78C800', borderRadius: 10 },
-  heartBox: { flexDirection: 'row', alignItems: 'center' },
+  heartBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF1F0', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15 },
   heartText: { marginLeft: 5, fontWeight: '900', color: '#FF5252', fontSize: 16 },
   gameBox: { flex: 1, padding: 25, alignItems: 'center', justifyContent: 'center' },
   instruction: { fontSize: 24, fontWeight: '900', color: '#455A64', textAlign: 'center', marginBottom: 20 },
@@ -225,7 +223,6 @@ const styles = StyleSheet.create({
   bigWord: { fontSize: 50, fontWeight: '900', color: '#1CB0F6', letterSpacing: 4, marginTop: 10, textAlign: 'center' },
   micBtn: { marginTop: 30, elevation: 5 },
   micCircle: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', borderBottomWidth: 6, borderBottomColor: 'rgba(0,0,0,0.2)' },
-  hintText: { marginTop: 10, fontWeight: 'bold', color: '#B0BEC5' },
   audioPlayer: { backgroundColor: '#E1F5FE', padding: 30, borderRadius: 30, alignItems: 'center', marginBottom: 30, borderBottomWidth: 6, borderBottomColor: '#B3E5FC' },
   audioText: { color: '#03A9F4', fontWeight: '900', marginTop: 10 },
   choiceGrid: { flexDirection: 'row', gap: 15 },
@@ -234,21 +231,26 @@ const styles = StyleSheet.create({
   syllableBtn: { width: 75, height: 75, borderRadius: 40, justifyContent: 'center', alignItems: 'center', elevation: 6, borderBottomWidth: 6, borderBottomColor: 'rgba(0,0,0,0.15)' },
   syllableBtnText: { color: 'white', fontSize: 36, fontWeight: '900' },
   imageBox: { backgroundColor: '#F8F9FA', padding: 20, borderRadius: 20, marginBottom: 20 },
-  slotRow: { flexDirection: 'row', gap: 8, marginBottom: 30, flexWrap: 'wrap', justifyContent: 'center' },
+  slotRow: { flexDirection: 'row', gap: 8, marginBottom: 30 },
   slot: { width: 50, height: 50, backgroundColor: '#F5F5F5', borderRadius: 10, borderBottomWidth: 4, borderColor: '#D0D0D0', justifyContent: 'center', alignItems: 'center' },
-  poolRow: { flexDirection: 'row', gap: 10, marginBottom: 40, flexWrap: 'wrap', justifyContent: 'center' },
+  poolRow: { flexDirection: 'row', gap: 10, marginBottom: 40 },
   tile: { width: 60, height: 60, backgroundColor: 'white', borderRadius: 10, elevation: 5, borderBottomWidth: 5, borderBottomColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' },
   tileText: { fontSize: 24, fontWeight: '900', color: '#1CB0F6' },
-  feedback: { position: 'absolute', bottom: 0, width: '100%', padding: 25, borderTopLeftRadius: 40, borderTopRightRadius: 40, elevation: 20 },
-  feedbackInfo: { flexDirection: 'row', alignItems: 'center', gap: 15, marginBottom: 15 },
-  feedbackTitle: { fontSize: 22, fontWeight: '900' },
-  contBtn: { width: '100%', padding: 18, borderRadius: 20, alignItems: 'center' },
-  contText: { color: 'white', fontWeight: '900', fontSize: 18 },
+  centerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  feedbackCard: { width: width * 0.85, padding: 40, borderRadius: 40, alignItems: 'center', elevation: 20 },
+  feedbackText: { color: 'white', fontSize: 36, fontWeight: '900', textAlign: 'center' },
+  xpGain: { color: 'white', fontSize: 18, fontWeight: 'bold', marginTop: 5 },
+  popBtn: { backgroundColor: 'white', paddingHorizontal: 50, paddingVertical: 18, borderRadius: 25, marginTop: 30 },
   rewardOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 30 },
-  rewardCard: { borderRadius: 50, padding: 40, alignItems: 'center' },
-  rewardTitle: { color: 'white', fontSize: 32, fontWeight: '900', marginTop: 20 },
-  rewardXP: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  doneBtn: { backgroundColor: 'white', paddingVertical: 15, paddingHorizontal: 50, borderRadius: 25, marginTop: 40 },
+  rewardCard: { borderRadius: 50, padding: 30, alignItems: 'center', width: '100%' },
+  rewardTitle: { color: 'white', fontSize: 32, fontWeight: '900', marginTop: 10 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginVertical: 20, backgroundColor: 'rgba(255,255,255,0.2)', padding: 15, borderRadius: 20 },
+  statItem: { alignItems: 'center' },
+  statLabel: { color: 'white', fontSize: 10, fontWeight: 'bold', opacity: 0.8 },
+  statVal: { color: 'white', fontSize: 18, fontWeight: '900' },
+  badgeBox: { backgroundColor: 'white', padding: 20, borderRadius: 30, alignItems: 'center', width: '100%', elevation: 5 },
+  badgeName: { fontWeight: '900', color: '#455A64', marginTop: 10 },
+  doneBtn: { backgroundColor: 'white', paddingVertical: 15, paddingHorizontal: 50, borderRadius: 25, marginTop: 30 },
   doneText: { color: '#FFA000', fontWeight: '900', fontSize: 18 }
 });
 
