@@ -3,33 +3,29 @@
     "name": "ReadChampApp",
     "slug": "ReadChampApp",
     "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp"
     },
     "android": {
-      "permissions": [
-        "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
-      ],
       "package": "com.neu_garcia_angelanne.ReadChampApp"
     },
     "plugins": [
-      "expo-router",
-      [
-        "@react-native-voice/voice",
-        {
-          "microphonePermission": "Allow ReadChamp to check your reading pronunciation."
-        }
-      ],
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "2.0.20"
-          }
-        }
-      ]
-    ]
+      "expo-router"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "aae61263-6478-4f7d-9229-0540a9ed78c4"
+      }
+    }
   }
 }

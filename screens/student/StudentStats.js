@@ -45,7 +45,7 @@ const StudentStats = ({ navigation }) => {
           <Text style={styles.sectionLabel}>MY BADGES 🏆</Text>
           <View style={styles.badgesCard}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {['cat', 'pin', 'dog', 'sun-side', 'ship-wheel'].map((icon, index) => (
+              {['cat', 'pin', 'dog', 'weather-sunny', 'ship-wheel'].map((icon, index) => (
                 <View key={index} style={styles.badgeCircle}><MaterialCommunityIcons name={icon} size={35} color={COLORS.primary} /></View>
               ))}
             </ScrollView>

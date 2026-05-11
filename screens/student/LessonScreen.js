@@ -4,14 +4,24 @@ import {
   Animated, Dimensions, Modal, StatusBar, Platform, Alert 
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient'; // FIXED IMPORT
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '../../theme';
 import GameButton from '../../components/GameButton';
 import * as Speech from 'expo-speech';
 
 const { width, height } = Dimensions.get('window');
 
-// --- CURRICULUM DATA ---
+// --- DATA CONSTANTS ---
+const CONGRATS = ["AWESOME!", "GREAT JOB!", "VERY GOOD!", "PERFECT!"];
+
+const BADGES = {
+  1: { name: 'At-Family Hero', icon: 'cat' }, 2: { name: 'In-It Master', icon: 'pin' },
+  3: { name: 'Short-O Expert', icon: 'dog' }, 4: { name: 'Vowel Voyager', icon: 'weather-sunny' },
+  5: { name: 'Digraph Champ', icon: 'ship-wheel' }, 6: { name: 'Blend Boss', icon: 'star-face' },
+  7: { name: 'Syllable Scout', icon: 'apple' }, 8: { name: 'Compound King', icon: 'home-variant' },
+  9: { name: 'Sight Word Star', icon: 'eye-check' }, 10: { name: 'Reading Champion', icon: 'trophy-variant' }
+};
+
 const LESSON_DATA = {
   1: { speak: { word: "CAT", emoji: "🐱" }, id: { sound: "Meow", options: [{e:'🐷', n:'PIG'}, {e:'🐱', n:'CAT'}, {e:'🐶', n:'DOG'}], correct: 'CAT' }, syllable: { word: "CAT", count: 1 }, spell: { word: "CAT", pool: ['T', 'A', 'C'], emoji: "🐱" } },
   2: { speak: { word: "PIN", emoji: "📍" }, id: { sound: "Pop!", options: [{e:'📍', n:'PIN'}, {e:'📦', n:'BOX'}, {e:'☀️', n:'SUN'}], correct: 'PIN' }, syllable: { word: "SIT", count: 1 }, spell: { word: "BIN", pool: ['I', 'B', 'N'], emoji: "🗑️" } },
@@ -25,24 +35,11 @@ const LESSON_DATA = {
   10: { speak: { word: "I LOVE SCHOOL", emoji: "🏫" }, id: { sound: "Bell", options: [{e:'🏫', n:'SCHOOL'}, {e:'🏠', n:'HOUSE'}, {e:'🌳', n:'PARK'}], correct: 'SCHOOL' }, syllable: { word: "READ-ING", count: 2 }, spell: { word: "CHAMPION", pool: ['C','H','A','M','P','I','O','N'], emoji: "🏆" } }
 };
 
-const BADGES = {
-  1: { name: 'At-Family Hero', icon: 'cat' }, 
-  2: { name: 'In-It Master', icon: 'pin' },
-  3: { name: 'Short-O Expert', icon: 'dog' }, 
-  4: { name: 'Vowel Voyager', icon: 'weather-sunny' }, 
-  6: { name: 'Blend Boss', icon: 'star-face' },
-  7: { name: 'Syllable Scout', icon: 'apple' }, 
-  8: { name: 'Compound King', icon: 'home-variant' },
-  9: { name: 'Sight Word Star', icon: 'eye-check' }, 
-  10: { name: 'Reading Champion', icon: 'trophy-variant' }
-};
-
-const CONGRATS = ["AWESOME!", "GREAT JOB!", "VERY GOOD!", "PERFECT!"];
-
 const LessonScreen = ({ route, navigation }) => {
   const { levelId } = route.params || { levelId: 1 };
   const currentLesson = LESSON_DATA[levelId] || LESSON_DATA[1];
 
+  // --- STATES ---
   const [step, setStep] = useState(0); 
   const [isCorrect, setIsCorrect] = useState(null);
   const [showReward, setShowReward] = useState(false);
@@ -85,14 +82,27 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- MINIGAME RENDERERS ---
+  // --- SPELLING ACTIONS ---
+  const addLetter = (char, index) => {
+    setTargetWord([...targetWord, char]);
+    setPool(pool.filter((_, idx) => idx !== index));
+  };
+
+  const removeLetter = (char, index) => {
+    const newTarget = [...targetWord];
+    newTarget.splice(index, 1);
+    setTargetWord(newTarget);
+    setPool([...pool, char]);
+  };
+
+  // --- RENDERERS ---
   const RenderSpeak = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Say the word! 🗣️</Text>
-      <TouchableOpacity style={styles.mainCard} onPress={() => speak(currentLesson.speak.word)}>
+      <View style={styles.mainCard}>
           <Text style={{fontSize: 80}}>{currentLesson.speak.emoji}</Text>
           <Text style={styles.bigWord}>{currentLesson.speak.word}</Text>
-      </TouchableOpacity>
+      </View>
       <TouchableOpacity style={styles.micBtn} onPress={() => handleAnswer(true)}>
         <LinearGradient colors={['#1CB0F6', '#64B5F6']} style={styles.micCircle}><Ionicons name="mic" size={45} color="white" /></LinearGradient>
       </TouchableOpacity>
@@ -102,12 +112,15 @@ const LessonScreen = ({ route, navigation }) => {
   const RenderIdentify = () => (
     <View style={styles.gameBox}>
       <Text style={styles.instruction}>Who makes this sound? 🔊</Text>
-      <TouchableOpacity style={styles.audioPlayer} onPress={() => speak(currentLesson.id.sound)}>
+      <TouchableOpacity style={styles.audioPlayer} onPress={() => speak(currentLesson.id.correct)}>
           <Ionicons name="volume-high" size={50} color="#1CB0F6" /><Text style={styles.audioText}>PLAY SOUND</Text>
       </TouchableOpacity>
       <View style={styles.choiceGrid}>
           {currentLesson.id.options.map((item, i) => (
-              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}><Text style={{fontSize: 45}}>{item.e}</Text></TouchableOpacity>
+              <TouchableOpacity key={i} style={styles.choiceCard} onPress={() => handleAnswer(item.n === currentLesson.id.correct)}>
+                  {/* FIXED: Emoji visibility with dark color */}
+                  <Text style={{fontSize: 45, color: '#000'}}>{item.e}</Text>
+              </TouchableOpacity>
           ))}
       </View>
     </View>
@@ -131,14 +144,14 @@ const LessonScreen = ({ route, navigation }) => {
       <View style={styles.imageBox}><Text style={{fontSize: 60}}>{currentLesson.spell.emoji}</Text></View>
       <View style={styles.slotRow}>
         {currentLesson.spell.word.split('').map((_, i) => (
-            <TouchableOpacity key={i} style={styles.slot} onPress={() => targetWord[i] && (setPool([...pool, targetWord[i]]), setTargetWord(targetWord.filter((_, idx) => idx !== i)))}>
+            <TouchableOpacity key={i} style={styles.slot} onPress={() => targetWord[i] && removeLetter(targetWord[i], i)}>
                 <Text style={styles.tileText}>{targetWord[i] || ""}</Text>
             </TouchableOpacity>
         ))}
       </View>
       <View style={styles.poolRow}>
         {pool.map((c, i) => (
-            <TouchableOpacity key={i} style={styles.tile} onPress={() => { setTargetWord([...targetWord, c]); setPool(pool.filter((_, idx) => idx !== i)); }}><Text style={styles.tileText}>{c}</Text></TouchableOpacity>
+            <TouchableOpacity key={i} style={styles.tile} onPress={() => addLetter(c, i)}><Text style={styles.tileText}>{c}</Text></TouchableOpacity>
         ))}
       </View>
       <GameButton title="CHECK" color={COLORS.primary} onPress={() => handleAnswer(targetWord.join('') === currentLesson.spell.word)} disabled={targetWord.length < currentLesson.spell.word.length} />
