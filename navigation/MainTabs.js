@@ -7,6 +7,12 @@ import StudentHome from '../screens/student/StudentHome';
 import StudentStats from '../screens/student/StudentStats';
 import StudentProfile from '../screens/student/StudentProfile';
 
+//SAMPLE COMMENT
+
+
+//SAMPLE COMMENT 2
+
+
 const Tab = createBottomTabNavigator();
 
 const MainTabs = () => {

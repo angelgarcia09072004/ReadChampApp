@@ -13,10 +13,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp"
+      "bundleIdentifier": "com.neu_garcia_angelanne.ReadChampApp",
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.neu_garcia_angelanne.ReadChampApp"
+      "package": "com.neu_garcia_angelanne.ReadChampApp",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "plugins": [
       "expo-router"
@@ -26,6 +31,7 @@
       "eas": {
         "projectId": "aae61263-6478-4f7d-9229-0540a9ed78c4"
       }
-    }
+    },
+    "owner": "neu_garcia_angelanne"
   }
 }
