@@ -36,6 +36,13 @@
     },
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c70c4e64-6c80-45fc-a6dd-0008d53f5166"
+      }
+    },
+    "owner": "neu_sanmiguel_princelawrence"
   }
 }
