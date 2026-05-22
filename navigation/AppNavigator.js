@@ -12,8 +12,11 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import MainTabs from './MainTabs';       
 import TeacherTabs from './TeacherTabs'; 
 
-// --- GAME & DETAIL SCREENS ---
+// --- STUDENT SCREENS (added TutorialScreen) ---
+import TutorialScreen from '../screens/student/TutorialScreen';
 import LessonScreen from '../screens/student/LessonScreen';
+
+// --- TEACHER SCREENS ---
 import StudentDetail from '../screens/teacher/StudentDetail';
 import RoomDetail from '../screens/teacher/RoomDetail';
 
@@ -23,7 +26,7 @@ function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator 
-        initialRouteName="Welcome" 
+        initialRouteName="Tutorial" 
         screenOptions={{ headerShown: false }}
       >
         {/* 1. AUTHENTICATION FLOW */}
@@ -33,6 +36,7 @@ function AppNavigator() {
         <Stack.Screen name="Register" component={RegisterScreen} />
 
         {/* 2. STUDENT INTERFACE */}
+        <Stack.Screen name="Tutorial" component={TutorialScreen} />
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="LessonScreen" component={LessonScreen} /> 
 

@@ -81,14 +81,9 @@ const RoomDetail = ({ route, navigation }) => {
                 </TouchableOpacity>
                 
                 <View style={styles.actionRow}>
-                    {/* FEEDBACK ICON */}
-                    <TouchableOpacity onPress={() => navigation.navigate('Students')}>
-                        <Ionicons name="chatbubble-ellipses-outline" size={22} color={COLORS.primary} />
-                    </TouchableOpacity>
-
-                    {/* REMOVE FROM ROOM ICON */}
+                    {/* REMOVED FEEDBACK ICON - ONLY REMOVE ICON REMAINS */}
                     <TouchableOpacity onPress={() => { setSelectedStudent(item); setRemoveModal(true); }}>
-                        <Ionicons name="person-remove-outline" size={24} color="#FF5252" />
+                        <Ionicons name="person-remove-outline" size={26} color="#FF5252" />
                     </TouchableOpacity>
                 </View>
               </View>
@@ -187,8 +182,6 @@ const styles = StyleSheet.create({
     borderLeftColor: '#F5F5F5', 
     paddingLeft: 15 
   },
-  
-  // MODAL STYLES
   modalOverlay: { 
     flex: 1, 
     backgroundColor: 'rgba(0,0,0,0.6)', 
