@@ -19,6 +19,14 @@ import LessonScreen from '../screens/student/LessonScreen';
 // --- TEACHER SCREENS ---
 import StudentDetail from '../screens/teacher/StudentDetail';
 import RoomDetail from '../screens/teacher/RoomDetail';
+import CreateModule from '../screens/teacher/CreateModule';
+import LetterRecognition from '../screens/teacher/LetterRecognition';
+import PictureMatching from '../screens/teacher/PictureMatching';
+import WordMatching from '../screens/teacher/WordMatching';
+import NumberWordMatching from '../screens/teacher/NumberWordMatching';
+import Storytelling from '../screens/teacher/Storytelling';
+import SoundMatching from '../screens/teacher/SoundMatching';
+
 
 const Stack = createStackNavigator();
 
@@ -44,6 +52,14 @@ function AppNavigator() {
         <Stack.Screen name="TeacherTabs" component={TeacherTabs} />
         <Stack.Screen name="StudentDetail" component={StudentDetail} />
         <Stack.Screen name="RoomDetail" component={RoomDetail} />
+        <Stack.Screen name="CreateModule" component={CreateModule} options={{ headerShown: false }} />
+        <Stack.Screen name="LetterRecognition" component={LetterRecognition} />
+        <Stack.Screen name="PictureMatching" component={PictureMatching} />
+        <Stack.Screen name="WordMatching" component={WordMatching} />
+        <Stack.Screen name="NumberWordMatching" component={NumberWordMatching} />
+        <Stack.Screen name="Storytelling" component={Storytelling} />
+        <Stack.Screen name="SoundMatching" component={SoundMatching} />
+
 
       </Stack.Navigator>
     </NavigationContainer>
