@@ -43,9 +43,16 @@ const RoomDetail = ({ route, navigation }) => {
 
   const handleCreateModule = () => {
     setFabOpen(false);
-    // Navigate to your Create Module screen here
-    // navigation.navigate('CreateModule', { roomName });
     navigation.navigate('CreateModule', { roomName });
+  };
+
+  const handleViewAnalytics = () => {
+    setFabOpen(false);
+    
+    navigation.navigate('Analytics', { 
+      roomName, 
+      students: roomStudents 
+    });
   };
 
   return (
@@ -101,9 +108,10 @@ const RoomDetail = ({ route, navigation }) => {
         />
       )}
 
-      {/* ── POP-UP ACTION BUTTON (slides up when FAB is open) ── */}
+      {/* ── POP-UP ACTION MENU (slides up when FAB is open) ── */}
       {fabOpen && (
         <View style={styles.fabMenuContainer}>
+          {/* Create Module Button */}
           <TouchableOpacity style={styles.fabMenuItem} onPress={handleCreateModule}>
             <View style={styles.fabMenuIcon}>
               <Ionicons name="albums-outline" size={20} color="#fff" />
@@ -111,6 +119,17 @@ const RoomDetail = ({ route, navigation }) => {
             <View style={styles.fabMenuLabel}>
               <Text style={styles.fabMenuText}>Create Module</Text>
               <Text style={styles.fabMenuSub}>Add a new reading activity</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* View Analytics Button */}
+          <TouchableOpacity style={styles.fabMenuItem} onPress={handleViewAnalytics}>
+            <View style={[styles.fabMenuIcon, { backgroundColor: '#AB47BC' }]}>
+              <Ionicons name="bar-chart-outline" size={20} color="#fff" />
+            </View>
+            <View style={styles.fabMenuLabel}>
+              <Text style={styles.fabMenuText}>View Analytics</Text>
+              <Text style={styles.fabMenuSub}>Track student reading progress</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -263,6 +282,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     zIndex: 15,
     width: width * 0.78,
+    gap: 10, // vertical spacing for multiple stacked menu items
   },
   fabMenuItem: {
     backgroundColor: 'white',

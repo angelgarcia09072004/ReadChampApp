@@ -26,7 +26,7 @@ import WordMatching from '../screens/teacher/WordMatching';
 import NumberWordMatching from '../screens/teacher/NumberWordMatching';
 import Storytelling from '../screens/teacher/Storytelling';
 import SoundMatching from '../screens/teacher/SoundMatching';
-
+import Analytics from '../screens/teacher/Analytics';
 
 const Stack = createStackNavigator();
 
@@ -59,7 +59,7 @@ function AppNavigator() {
         <Stack.Screen name="NumberWordMatching" component={NumberWordMatching} />
         <Stack.Screen name="Storytelling" component={Storytelling} />
         <Stack.Screen name="SoundMatching" component={SoundMatching} />
-
+        <Stack.Screen name="Analytics" component={Analytics} />
 
       </Stack.Navigator>
     </NavigationContainer>

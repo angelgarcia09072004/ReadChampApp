@@ -1,43 +1,161 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, 
-  Dimensions, Modal, StatusBar, Platform, ScrollView, Animated, PanResponder 
+  Dimensions, Modal, StatusBar, Platform, ScrollView, Animated, PanResponder, Image 
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Speech from 'expo-speech';
+import { Audio } from 'expo-av';
 
 const { width } = Dimensions.get('window');
 
 const CONGRATS = ["AWESOME!", "GREAT JOB!", "VERY GOOD!", "PERFECT!", "FANTASTIC!"];
 
-const STORY_SENTENCES = [
-  "Ben has a red ball.",
-  "He plays outside with his dog.",
-  "The ball rolls into the grass.",
-  "Ben finds the ball and smiles."
+// Fallback letter-recognition data matching the teacher's default setups
+const DEFAULT_LETTER_QUESTIONS = [
+  {
+    id: 'q1',
+    number: 1,
+    pairCount: 3,
+    pairs: [
+      { pairId: 'p1', uppercase: 'A', lowercase: 'a' },
+      { pairId: 'p2', uppercase: 'B', lowercase: 'b' },
+      { pairId: 'p3', uppercase: 'C', lowercase: 'c' },
+    ],
+  },
+  {
+    id: 'q2',
+    number: 2,
+    pairCount: 3,
+    pairs: [
+      { pairId: 'p1', uppercase: 'S', lowercase: 's' },
+      { pairId: 'p2', uppercase: 'M', lowercase: 'm' },
+      { pairId: 'p3', uppercase: 'T', lowercase: 't' },
+    ],
+  }
 ];
 
-// Correct matching pairings
-const CORRECT_MATCHES = { 'A': 'a', 'B': 'b', 'C': 'c' };
+// Fallback picture-matching data matching the teacher's default setups
+const DEFAULT_PICTURE_QUESTIONS = [
+  {
+    id: 'q1',
+    number: 1,
+    imageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300', // Apple
+    correctWord: 'Apple',
+    distractor1: 'Banana',
+    distractor2: 'Orange',
+  },
+  {
+    id: 'q2',
+    number: 2,
+    imageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', // Banana
+    correctWord: 'Banana',
+    distractor1: 'Apple',
+    distractor2: 'Orange',
+  }
+];
 
-// Color coding cues matching your drawing
-const LINE_COLORS = { 'A': '#FF6B6B', 'B': '#9B51E0', 'C': '#2F80ED' };
+// Fallback word-matching data matching the teacher's default setups
+const DEFAULT_WORD_QUESTIONS = [
+  {
+    id: 'q1',
+    number: 1,
+    targetWord: 'CAT',
+    correctImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200', // Cat
+    distractor1ImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200', // Dog
+    distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200', // Bird
+  },
+  {
+    id: 'q2',
+    number: 2,
+    targetWord: 'DOG',
+    correctImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200', // Dog
+    distractor1ImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200', // Cat
+    distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200', // Bird
+  }
+];
 
-// Static coordinate grid for letters
-const LEFT_COORDS = {
-  'A': { x: 50, y: 60 },
-  'B': { x: 50, y: 180 },
-  'C': { x: 50, y: 300 }
-};
+// Fallback number-matching data matching the teacher's default setups
+const DEFAULT_NUMBER_QUESTIONS = [
+  {
+    id: 'q1',
+    number: 1,
+    targetNumber: '3',
+    correctWord: 'Three',
+    distractor1: 'Two',
+    distractor2: 'Four',
+  },
+  {
+    id: 'q2',
+    number: 2,
+    targetNumber: '5',
+    correctWord: 'Five',
+    distractor1: 'Four',
+    distractor2: 'Six',
+  }
+];
 
-const RIGHT_COORDS = {
-  'a': { x: 240, y: 60 },
-  'c': { x: 240, y: 180 },
-  'b': { x: 240, y: 300 }
-};
+// Fallback sound-matching data matching the teacher's default setups
+const DEFAULT_SOUND_QUESTIONS = [
+  {
+    id: 'q1',
+    number: 1,
+    audioUri: 'Banana',
+    optionalImageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', // Banana
+    correctWord: 'Banana',
+    distractor1: 'Apple',
+    distractor2: 'Orange',
+  },
+  {
+    id: 'q2',
+    number: 2,
+    audioUri: 'Apple',
+    optionalImageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300', // Apple
+    correctWord: 'Apple',
+    distractor1: 'Banana',
+    distractor2: 'Orange',
+  }
+];
+
+// Fallback storytelling data matching the teacher's default setups
+const DEFAULT_STORY_QUESTIONS = [
+  {
+    id: 'story_1',
+    number: 1,
+    title: 'Ben and the Red Ball',
+    sentences: [
+      { id: 's1', text: 'Ben has a red ball.', illustrationUri: null, vocabWords: ['red', 'ball'] },
+      { id: 's2', text: 'He played outside today.', illustrationUri: null, vocabWords: ['played', 'outside'] },
+      { id: 's3', text: 'The ball bounced high.', illustrationUri: null, vocabWords: ['bounced', 'high'] },
+    ],
+    quizzes: [
+      { id: 'q1', type: 'picture_comp', question: "What color is Ben's ball?", choices: ['Blue', 'Red', 'Green'], correctIndex: 1 },
+      { id: 'q2', type: 'sequence', question: 'What happened first?', choices: ['Ben played outside', 'Ben found the ball', 'Ben smiled'], correctIndex: 0 },
+      { id: 'q3', type: 'vocab_match', question: 'Which picture shows BALL?', choice1Uri: null, choice2Uri: null, choice3Uri: null, correctIndex: 1 },
+      { id: 'q4', type: 'read_aloud', targetSentence: 'Ben has a red ball.' },
+    ],
+  },
+  {
+    id: 'story_2',
+    number: 2,
+    title: 'The Little Yellow Bird',
+    sentences: [
+      { id: 's1', text: 'A little bird sang a sweet song.', illustrationUri: null, vocabWords: ['bird', 'sang', 'song'] },
+      { id: 's2', text: 'It sat on a tall green tree.', illustrationUri: null, vocabWords: ['tall', 'green', 'tree'] },
+      { id: 's3', text: 'It flew high up in the blue sky.', illustrationUri: null, vocabWords: ['flew', 'blue', 'sky'] },
+    ],
+    quizzes: [
+      { id: 'q1', type: 'picture_comp', question: 'What color was the bird?', choices: ['Blue', 'Yellow', 'Red'], correctIndex: 1 },
+      { id: 'q2', type: 'sequence', question: 'What did the bird do first?', choices: ['It flew away', 'It sang a song', 'It slept'], correctIndex: 1 },
+      { id: 'q3', type: 'vocab_match', question: 'Which picture shows TREE?', choice1Uri: null, choice2Uri: null, choice3Uri: null, correctIndex: 1 },
+      { id: 'q4', type: 'read_aloud', targetSentence: 'A little bird sang a sweet song.' },
+    ],
+  }
+];
 
 const DrawConnectingLine = ({ p1, p2, color }) => {
+  if (!p1 || !p2) return null;
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   const distance = Math.sqrt(dx * dx + dy * dy);
@@ -62,7 +180,29 @@ const DrawConnectingLine = ({ p1, p2, color }) => {
 };
 
 const LessonScreen = ({ route, navigation }) => {
-  const { levelId } = route.params || { levelId: 1 };
+  // Retrieve level configuration and dynamic arrays from teacher modules
+  const { 
+    levelId = 1, 
+    letterQuestions, 
+    pictureQuestions, 
+    wordQuestions,
+    numberQuestions,
+    soundQuestions,
+    storyQuestions
+  } = route.params || {};
+
+  // Active question extraction based on selected level number
+  const activeLetterQuestions = letterQuestions || DEFAULT_LETTER_QUESTIONS;
+  const activeLetterQuestion = activeLetterQuestions.find(q => q.number === levelId) || activeLetterQuestions[0];
+  const activePairs = activeLetterQuestion.pairs || [];
+
+  const activePicQuestion = (pictureQuestions || DEFAULT_PICTURE_QUESTIONS).find(q => q.number === levelId) || DEFAULT_PICTURE_QUESTIONS[0];
+  const activeWordQuestion = (wordQuestions || DEFAULT_WORD_QUESTIONS).find(q => q.number === levelId) || DEFAULT_WORD_QUESTIONS[0];
+  const activeNumQuestion = (numberQuestions || DEFAULT_NUMBER_QUESTIONS).find(q => q.number === levelId) || DEFAULT_NUMBER_QUESTIONS[0];
+  const activeSoundQuestion = (soundQuestions || DEFAULT_SOUND_QUESTIONS).find(q => q.number === levelId) || DEFAULT_SOUND_QUESTIONS[0];
+  
+  const activeStoryQuestions = storyQuestions || DEFAULT_STORY_QUESTIONS;
+  const activeStory = activeStoryQuestions.find(s => s.number === levelId) || activeStoryQuestions[0];
 
   // --- STAGES & STEPS ---
   const [stage, setStage] = useState('exercise_intro'); 
@@ -81,7 +221,175 @@ const LessonScreen = ({ route, navigation }) => {
   // --- LINE MATCHING STATE ---
   const [connections, setConnections] = useState([]); // [{ from, to, color }]
   const [activeDragLine, setActiveDragLine] = useState(null); // { fromNode, startPt, endPt }
-  const [selectedLeftNode, setSelectedLeftNode] = useState(null); // Fallback selection state
+  const [selectedLeftNode, setSelectedLeftNode] = useState(null); // Highlight for tap connections
+
+  // --- DYNAMIC DATA & COORDINATE COMPUTATION ---
+  const leftItems = useMemo(() => activePairs.map(p => p.uppercase), [activePairs]);
+
+  // Shuffled sequence for lowercase characters (computed once on level mount)
+  const [rightItems, setRightItems] = useState([]);
+  useEffect(() => {
+    if (activePairs.length > 0) {
+      const shuffled = activePairs.map(p => p.lowercase);
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setRightItems(shuffled);
+    }
+  }, [activePairs]);
+
+  // Shuffled options for Exercise 2 (Picture Matching)
+  const picChoices = useMemo(() => {
+    if (!activePicQuestion) return [];
+    const list = [
+      { text: activePicQuestion.correctWord, isCorrect: true },
+      { text: activePicQuestion.distractor1, isCorrect: false },
+      { text: activePicQuestion.distractor2, isCorrect: false }
+    ].filter(c => c.text?.trim());
+
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activePicQuestion]);
+
+  // Shuffled options for Exercise 3 (Word Matching)
+  const wordChoices = useMemo(() => {
+    if (!activeWordQuestion) return [];
+    const list = [
+      { uri: activeWordQuestion.correctImageUri, isCorrect: true },
+      { uri: activeWordQuestion.distractor1ImageUri, isCorrect: false },
+      { uri: activeWordQuestion.distractor2ImageUri, isCorrect: false }
+    ].filter(c => c.uri);
+
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeWordQuestion]);
+
+  // Shuffled options for Exercise 4 (Number Matching)
+  const numChoices = useMemo(() => {
+    if (!activeNumQuestion) return [];
+    const list = [
+      { text: activeNumQuestion.correctWord, isCorrect: true },
+      { text: activeNumQuestion.distractor1, isCorrect: false },
+      { text: activeNumQuestion.distractor2, isCorrect: false }
+    ].filter(c => c.text?.trim());
+
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeNumQuestion]);
+
+  // Shuffled options for Exercise 5 (Sound Matching)
+  const soundChoices = useMemo(() => {
+    if (!activeSoundQuestion) return [];
+    const list = [
+      { text: activeSoundQuestion.correctWord, isCorrect: true },
+      { text: activeSoundQuestion.distractor1, isCorrect: false },
+      { text: activeSoundQuestion.distractor2, isCorrect: false }
+    ].filter(c => c.text?.trim());
+
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeSoundQuestion]);
+
+  // Shuffled choices for Story Comprehension (Quiz 1)
+  const quiz1Choices = useMemo(() => {
+    const q = activeStory?.quizzes?.[0];
+    if (!q) return [];
+    const list = q.choices.map((choice, index) => ({
+      text: choice,
+      isCorrect: index === q.correctIndex
+    }));
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeStory]);
+
+  // Shuffled choices for Story Sequencing (Quiz 2)
+  const quiz2Choices = useMemo(() => {
+    const q = activeStory?.quizzes?.[1];
+    if (!q) return [];
+    const list = q.choices.map((choice, index) => ({
+      text: choice,
+      isCorrect: index === q.correctIndex
+    }));
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeStory]);
+
+  // Shuffled choices for Story Vocabulary Matching (Quiz 3)
+  const quiz3Choices = useMemo(() => {
+    const q = activeStory?.quizzes?.[2];
+    if (!q) return [];
+    const list = [
+      { uri: q.choice1Uri, isCorrect: q.correctIndex === 0, fallbackIcon: 'car-sports' },
+      { uri: q.choice2Uri, isCorrect: q.correctIndex === 1, fallbackIcon: 'basketball' },
+      { uri: q.choice3Uri, isCorrect: q.correctIndex === 2, fallbackIcon: 'cookie' }
+    ];
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  }, [activeStory]);
+
+  // Dynamic coordinate points calculated mathematically based on list index
+  const leftCoords = useMemo(() => {
+    const coords = {};
+    leftItems.forEach((item, index) => {
+      coords[item] = { x: 50, y: 60 + index * 120 };
+    });
+    return coords;
+  }, [leftItems]);
+
+  const rightCoords = useMemo(() => {
+    const coords = {};
+    rightItems.forEach((item, index) => {
+      coords[item] = { x: 240, y: 60 + index * 120 };
+    });
+    return coords;
+  }, [rightItems]);
+
+  // Dynamic pairings maps
+  const correctMatches = useMemo(() => {
+    const map = {};
+    activePairs.forEach(p => {
+      map[p.uppercase] = p.lowercase;
+    });
+    return map;
+  }, [activePairs]);
+
+  const lineColors = useMemo(() => {
+    const colors = {};
+    const palette = ['#FF6B6B', '#9B51E0', '#2F80ED'];
+    leftItems.forEach((item, index) => {
+      colors[item] = palette[index % palette.length];
+    });
+    return colors;
+  }, [leftItems]);
+
+  // Reset line matches when substeps or stages shift
+  useEffect(() => {
+    setConnections([]);
+    setActiveDragLine(null);
+    setSelectedLeftNode(null);
+  }, [currentSubStep, stage]);
 
   // Highlight index for active words during story narration
   const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
@@ -107,13 +415,13 @@ const LessonScreen = ({ route, navigation }) => {
     } else if (stage === 'story_intro') {
       speak("Great job! Now let's read the story together. Are you ready to read?");
     } else if (stage === 'story') {
-      speak("Let's read Ben and the Red Ball together. Tap any word to hear it out loud!");
+      speak(`Let's read ${activeStory.title} together. Tap any word to hear it out loud!`);
     } else if (stage === 'quiz_intro') {
       speak("Let's check what you learned! Are you ready for the quiz?");
     } else if (stage === 'quiz') {
-      if (currentSubStep === 0) speak("What color is Ben's ball?");
-      if (currentSubStep === 1) speak("What happened first in our story?");
-      if (currentSubStep === 2) speak("Which picture shows a ball?");
+      if (currentSubStep === 0) speak(activeStory.quizzes[0]?.question || "What color is Ben's ball?");
+      if (currentSubStep === 1) speak(activeStory.quizzes[1]?.question || "What happened first in our story?");
+      if (currentSubStep === 2) speak(activeStory.quizzes[2]?.question || "Which picture shows a ball?");
       if (currentSubStep === 3) speak("Read Aloud Challenge! Tap the microphone and read the sentence out loud!");
     }
   };
@@ -165,21 +473,21 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- DYNAMIC LINE DRAG RESONDERS ---
+  // --- DYNAMIC LINE DRAG RESPONDERS ---
   const createLinePanResponder = (nodeKey) => {
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
-        const startPt = LEFT_COORDS[nodeKey];
+        const startPt = leftCoords[nodeKey];
         setActiveDragLine({
           fromNode: nodeKey,
           startPt,
           endPt: startPt
         });
-        setSelectedLeftNode(nodeKey); // Set selected state for tap fallback
+        setSelectedLeftNode(nodeKey);
       },
       onPanResponderMove: (e, gestureState) => {
-        const startPt = LEFT_COORDS[nodeKey];
+        const startPt = leftCoords[nodeKey];
         const currentX = startPt.x + gestureState.dx;
         const currentY = startPt.y + gestureState.dy;
 
@@ -190,22 +498,19 @@ const LessonScreen = ({ route, navigation }) => {
         });
       },
       onPanResponderRelease: (e, gestureState) => {
-        const startPt = LEFT_COORDS[nodeKey];
+        const startPt = leftCoords[nodeKey];
         const endX = startPt.x + gestureState.dx;
         const endY = startPt.y + gestureState.dy;
 
-        // Check if movement was extremely short (meaning it was a simple TAP)
         const isTap = Math.sqrt(gestureState.dx ** 2 + gestureState.dy ** 2) < 8;
 
         if (isTap) {
-          // Keep selection highlighted for tap fallback
           setSelectedLeftNode(nodeKey);
           speak(nodeKey);
         } else {
-          // Drag Release Collision Check
           let matchedRightKey = null;
-          Object.keys(RIGHT_COORDS).forEach((key) => {
-            const rPt = RIGHT_COORDS[key];
+          Object.keys(rightCoords).forEach((key) => {
+            const rPt = rightCoords[key];
             const dist = Math.sqrt((endX - rPt.x) ** 2 + (endY - rPt.y) ** 2);
             if (dist < 45) {
               matchedRightKey = key;
@@ -223,7 +528,7 @@ const LessonScreen = ({ route, navigation }) => {
     });
   };
 
-  // Tap-to-Connect fallback for emulator compatibility
+  // Tap-to-Connect fallback for emulator accessibility
   const handleRightNodePress = (rightKey) => {
     if (selectedLeftNode) {
       handleCompleteMatch(selectedLeftNode, rightKey);
@@ -233,15 +538,15 @@ const LessonScreen = ({ route, navigation }) => {
   };
 
   const handleCompleteMatch = (leftKey, rightKey) => {
-    if (CORRECT_MATCHES[leftKey] === rightKey) {
+    if (correctMatches[leftKey] === rightKey) {
       const alreadyExists = connections.some(c => c.from === leftKey);
       if (!alreadyExists) {
-        const newConnection = { from: leftKey, to: rightKey, color: LINE_COLORS[leftKey] };
+        const newConnection = { from: leftKey, to: rightKey, color: lineColors[leftKey] };
         const newConnectionsList = [...connections, newConnection];
         setConnections(newConnectionsList);
         setSelectedLeftNode(null);
         
-        if (newConnectionsList.length === 3) {
+        if (newConnectionsList.length === activePairs.length) {
           setTimeout(() => handleAnswer(true), 600);
         } else {
           speak("Matched! Find another one!");
@@ -253,6 +558,34 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
+  // Dual playback audio executor: plays voice recording or synthesizes text templates
+  const playExerciseAudio = async () => {
+    if (!activeSoundQuestion?.audioUri) return;
+    try {
+      const isLocalFile =
+        activeSoundQuestion.audioUri.startsWith('file://') ||
+        activeSoundQuestion.audioUri.includes('.wav') ||
+        activeSoundQuestion.audioUri.includes('.mp3') ||
+        activeSoundQuestion.audioUri.includes('.m4a');
+
+      if (isLocalFile) {
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: activeSoundQuestion.audioUri },
+          { shouldPlay: true }
+        );
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.didJustFinish) {
+            sound.unloadAsync();
+          }
+        });
+      } else {
+        speak(activeSoundQuestion.audioUri, 0.8);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // --- STORY FUNCTIONS ---
   const handleWordTap = (word) => {
     const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
@@ -260,7 +593,9 @@ const LessonScreen = ({ route, navigation }) => {
   };
 
   const handleReadFullSentence = () => {
-    const sentence = STORY_SENTENCES[storySentenceIndex];
+    const currentSentence = activeStory.sentences[storySentenceIndex];
+    if (!currentSentence) return;
+    const sentence = currentSentence.text;
     const words = sentence.split(" ");
     speak(sentence, 0.8);
 
@@ -298,160 +633,153 @@ const LessonScreen = ({ route, navigation }) => {
   // --- RENDER EXERCISES (STAGE 1) ---
   const RenderExercise = () => (
     <View style={styles.gameBox}>
-      {/* Ex 1: Sketch implementation - Letter Line Matching */}
+      {/* Ex 1: Letter Line Matching (Reflects Teacher configurations dynamically) */}
       {currentSubStep === 0 && (
         <View style={styles.gameCardLarge}>
           <Text style={styles.instruction}>Draw lines to match the letters!</Text>
           
           <View style={styles.matchingBoard}>
-            {/* Draw permanent correct connections */}
+            {/* Draw active connected lines dynamically */}
             {connections.map((c, i) => (
               <DrawConnectingLine 
                 key={i} 
-                p1={LEFT_COORDS[c.from]} 
-                p2={RIGHT_COORDS[c.to]} 
+                p1={leftCoords[c.from]} 
+                p2={rightCoords[c.to]} 
                 color={c.color} 
               />
             ))}
 
-            {/* Draw active drag preview line */}
+            {/* Draw active drag path preview line */}
             {activeDragLine && (
               <DrawConnectingLine 
                 p1={activeDragLine.startPt} 
                 p2={activeDragLine.endPt} 
-                color={LINE_COLORS[activeDragLine.fromNode]} 
+                color={lineColors[activeDragLine.fromNode]} 
               />
             )}
 
-            {/* Left nodes (A, B, C) */}
-            <View 
-              style={[
-                styles.nodeContainer, 
-                { left: 10, top: 20 },
-                selectedLeftNode === 'A' && styles.nodeSelectedGlow,
-                connections.some(c => c.from === 'A') && { borderColor: LINE_COLORS['A'] }
-              ]} 
-              {...createLinePanResponder('A').panHandlers}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['A'] }]}>A</Text>
-            </View>
-            <View 
-              style={[
-                styles.nodeContainer, 
-                { left: 10, top: 140 },
-                selectedLeftNode === 'B' && styles.nodeSelectedGlow,
-                connections.some(c => c.from === 'B') && { borderColor: LINE_COLORS['B'] }
-              ]} 
-              {...createLinePanResponder('B').panHandlers}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['B'] }]}>B</Text>
-            </View>
-            <View 
-              style={[
-                styles.nodeContainer, 
-                { left: 10, top: 260 },
-                selectedLeftNode === 'C' && styles.nodeSelectedGlow,
-                connections.some(c => c.from === 'C') && { borderColor: LINE_COLORS['C'] }
-              ]} 
-              {...createLinePanResponder('C').panHandlers}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['C'] }]}>C</Text>
-            </View>
+            {/* Render left-hand column nodes dynamically */}
+            {leftItems.map((item, index) => {
+              const isSelected = selectedLeftNode === item;
+              const isConnected = connections.some(c => c.from === item);
+              return (
+                <View 
+                  key={item}
+                  style={[
+                    styles.nodeContainer, 
+                    { left: 10, top: 20 + index * 120 },
+                    isSelected && styles.nodeSelectedGlow,
+                    isConnected && { borderColor: lineColors[item] }
+                  ]} 
+                  {...createLinePanResponder(item).panHandlers}
+                >
+                  <Text style={[styles.letterNodeText, { color: lineColors[item] }]}>{item}</Text>
+                </View>
+              );
+            })}
 
-            {/* Right nodes (a, c, b - Pressable fallback added for emulators) */}
-            <TouchableOpacity 
-              activeOpacity={0.8}
-              onPress={() => handleRightNodePress('a')}
-              style={[styles.nodeContainer, { right: 10, top: 20, borderColor: connections.some(c => c.to === 'a') ? LINE_COLORS['A'] : '#E2E8F0' }]}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['A'] }]}>a</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              activeOpacity={0.8}
-              onPress={() => handleRightNodePress('c')}
-              style={[styles.nodeContainer, { right: 10, top: 140, borderColor: connections.some(c => c.to === 'c') ? LINE_COLORS['C'] : '#E2E8F0' }]}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['C'] }]}>c</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              activeOpacity={0.8}
-              onPress={() => handleRightNodePress('b')}
-              style={[styles.nodeContainer, { right: 10, top: 260, borderColor: connections.some(c => c.to === 'b') ? LINE_COLORS['B'] : '#E2E8F0' }]}
-            >
-              <Text style={[styles.letterNodeText, { color: LINE_COLORS['B'] }]}>b</Text>
-            </TouchableOpacity>
+            {/* Render right-hand column nodes dynamically (shuffled) */}
+            {rightItems.map((item, index) => {
+              const isConnected = connections.some(c => c.to === item);
+              const matchingLeftItem = leftItems.find(l => correctMatches[l] === item);
+              const borderColor = isConnected && matchingLeftItem ? lineColors[matchingLeftItem] : '#E2E8F0';
+              const textColor = matchingLeftItem ? lineColors[matchingLeftItem] : '#37474F';
+
+              return (
+                <TouchableOpacity 
+                  key={item}
+                  activeOpacity={0.8}
+                  onPress={() => handleRightNodePress(item)}
+                  style={[
+                    styles.nodeContainer, 
+                    { right: 10, top: 20 + index * 120, borderColor }
+                  ]}
+                >
+                  <Text style={[styles.letterNodeText, { color: textColor }]}>{item}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       )}
 
-      {/* Ex 2: Picture Matching (Apple icon -> Apple) */}
+      {/* Ex 2: Picture Matching (Dynamically displays teacher's configured picture) */}
       {currentSubStep === 1 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Picture Matching</Text>
           <View style={styles.focusContainer}>
-            <FontAwesome5 name="apple-alt" size={90} color="#FF5E5E" />
+            {activePicQuestion.imageUri ? (
+              <Image source={{ uri: activePicQuestion.imageUri }} style={styles.focusImage} />
+            ) : (
+              <FontAwesome5 name="apple-alt" size={90} color="#FF5E5E" />
+            )}
           </View>
           <View style={styles.optionsColumn}>
-            {['Banana', 'Apple', 'Orange'].map((opt) => (
-              <TouchableOpacity key={opt} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt === 'Apple')}>
-                <Text style={styles.optionTextLong}>{opt}</Text>
+            {picChoices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+                <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
 
-      {/* Ex 3: Word Matching (CAT -> Cat Icon) */}
+      {/* Ex 3: Word Matching (Dynamically displays teacher's configured word and choices) */}
       {currentSubStep === 2 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Word Matching</Text>
           <View style={styles.focusContainer}>
-            <Text style={styles.bigFocusText}>CAT</Text>
+            <Text style={styles.bigFocusText}>{activeWordQuestion.targetWord || 'WORD'}</Text>
           </View>
           <View style={styles.optionsRow}>
-            {[
-              { name: 'dog', icon: 'dog' },
-              { name: 'cat', icon: 'cat' },
-              { name: 'bird', icon: 'twitter' }
-            ].map((opt) => (
-              <TouchableOpacity key={opt.name} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.name === 'cat')}>
-                <MaterialCommunityIcons name={opt.icon} size={50} color="#1E62D0" />
+            {wordChoices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
+                {opt.uri ? (
+                  <Image source={{ uri: opt.uri }} style={styles.choiceImage} />
+                ) : (
+                  <Ionicons name="image-outline" size={40} color="#1E62D0" />
+                )}
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
 
-      {/* Ex 4: Number Matching (3 -> Three) */}
+      {/* Ex 4: Number Matching (Dynamically displays teacher's configured numeral and choices) */}
       {currentSubStep === 3 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Number Matching</Text>
           <View style={styles.focusContainer}>
-            <Text style={styles.bigFocusText}>3</Text>
+            <Text style={styles.bigFocusText}>{activeNumQuestion.targetNumber || '?'}</Text>
           </View>
           <View style={styles.optionsColumn}>
-            {['Two', 'Three', 'Four'].map((opt) => (
-              <TouchableOpacity key={opt} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt === 'Three')}>
-                <Text style={styles.optionTextLong}>{opt}</Text>
+            {numChoices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+                <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       )}
 
-      {/* Ex 5: Phonics Sound Matching (Hear "Banana" -> Banana) */}
+      {/* Ex 5: Phonics Sound Matching (Dynamically executes custom voice and features side-by-side optional image) */}
       {currentSubStep === 4 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Phonics Sound Matching</Text>
-          <TouchableOpacity onPress={() => speak("Banana")} style={styles.soundButton}>
-            <Ionicons name="volume-high" size={50} color="#FFFFFF" />
-          </TouchableOpacity>
+          <View style={styles.centerSectionRow}>
+            <TouchableOpacity onPress={playExerciseAudio} style={styles.soundButton}>
+              <Ionicons name="volume-high" size={50} color="#FFFFFF" />
+            </TouchableOpacity>
+            {activeSoundQuestion.optionalImageUri && (
+              <View style={styles.studentOptionalImageContainer}>
+                <Image source={{ uri: activeSoundQuestion.optionalImageUri }} style={styles.studentOptionalImage} />
+              </View>
+            )}
+          </View>
           <View style={styles.optionsColumn}>
-            {['Apple', 'Banana', 'Orange'].map((opt) => (
-              <TouchableOpacity key={opt} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt === 'Banana')}>
-                <Text style={styles.optionTextLong}>{opt}</Text>
+            {soundChoices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+                <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -461,75 +789,86 @@ const LessonScreen = ({ route, navigation }) => {
   );
 
   // --- RENDER STORYTELLING (STAGE 2) ---
-  const RenderStory = () => (
-    <ScrollView contentContainerStyle={styles.storyScrollView}>
-      <Text style={styles.storyHeaderTitle}>"Ben and the Red Ball"</Text>
-      
-      <View style={styles.storySceneFrame}>
-        <MaterialCommunityIcons name="dog" size={80} color="#8D6E63" style={{ marginRight: 25 }} />
-        <Ionicons name="basketball" size={80} color="#FF6B6B" />
-      </View>
+  const RenderStory = () => {
+    const currentSentence = activeStory.sentences[storySentenceIndex];
+    if (!currentSentence) return null;
 
-      <View style={styles.sentenceWrapper}>
-        <View style={styles.wordPillContainer}>
-          {STORY_SENTENCES[storySentenceIndex].split(" ").map((word, idx) => (
-            <TouchableOpacity 
-              key={idx} 
-              onPress={() => handleWordTap(word)}
-              style={[
-                styles.wordPill,
-                highlightedWordIndex === idx && styles.activeWordPill
-              ]}
-            >
-              <Text style={[styles.wordText, highlightedWordIndex === idx && styles.activeWordText]}>
-                {word}
-              </Text>
-            </TouchableOpacity>
-          ))}
+    return (
+      <ScrollView contentContainerStyle={styles.storyScrollView}>
+        <Text style={styles.storyHeaderTitle}>"{activeStory.title}"</Text>
+        
+        <View style={styles.storySceneFrame}>
+          {currentSentence.illustrationUri ? (
+            <Image source={{ uri: currentSentence.illustrationUri }} style={styles.storyIllustration} />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="dog" size={80} color="#8D6E63" style={{ marginRight: 25 }} />
+              <Ionicons name="basketball" size={80} color="#FF6B6B" />
+            </>
+          )}
         </View>
-      </View>
 
-      <Text style={styles.storyGuideText}>Tap words above to hear Champ pronounce them!</Text>
+        <View style={styles.sentenceWrapper}>
+          <View style={styles.wordPillContainer}>
+            {currentSentence.text.split(" ").map((word, idx) => (
+              <TouchableOpacity 
+                key={idx} 
+                onPress={() => handleWordTap(word)}
+                style={[
+                  styles.wordPill,
+                  highlightedWordIndex === idx && styles.activeWordPill
+                ]}
+              >
+                <Text style={[styles.wordText, highlightedWordIndex === idx && styles.activeWordText]}>
+                  {word}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-      <TouchableOpacity onPress={handleReadFullSentence} style={styles.storySpeakBtn}>
-        <Ionicons name="play-circle" size={24} color="#FFF" style={{ marginRight: 8 }} />
-        <Text style={styles.storySpeakBtnText}>Read Sentence</Text>
-      </TouchableOpacity>
+        <Text style={styles.storyGuideText}>Tap words above to hear Champ pronounce them!</Text>
 
-      <View style={styles.storyNavControls}>
-        {storySentenceIndex > 0 ? (
-          <TouchableOpacity onPress={() => setStorySentenceIndex(storySentenceIndex - 1)} style={styles.storyNavPill}>
-            <Ionicons name="arrow-back" size={24} color="#1E62D0" />
-          </TouchableOpacity>
-        ) : <View style={{ width: 60 }} />}
+        <TouchableOpacity onPress={handleReadFullSentence} style={styles.storySpeakBtn}>
+          <Ionicons name="play-circle" size={24} color="#FFF" style={{ marginRight: 8 }} />
+          <Text style={styles.storySpeakBtnText}>Read Sentence</Text>
+        </TouchableOpacity>
 
-        {storySentenceIndex < STORY_SENTENCES.length - 1 ? (
-          <TouchableOpacity onPress={() => setStorySentenceIndex(storySentenceIndex + 1)} style={styles.storyNavPill}>
-            <Ionicons name="arrow-forward" size={24} color="#1E62D0" />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity onPress={() => setStage('quiz_intro')} style={styles.startQuizBtn}>
-            <Text style={styles.startQuizBtnText}>Done Reading!</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
-  );
+        <View style={styles.storyNavControls}>
+          {storySentenceIndex > 0 ? (
+            <TouchableOpacity onPress={() => setStorySentenceIndex(storySentenceIndex - 1)} style={styles.storyNavPill}>
+              <Ionicons name="arrow-back" size={24} color="#1E62D0" />
+            </TouchableOpacity>
+          ) : <View style={{ width: 60 }} />}
+
+          {storySentenceIndex < activeStory.sentences.length - 1 ? (
+            <TouchableOpacity onPress={() => setStorySentenceIndex(storySentenceIndex + 1)} style={styles.storyNavPill}>
+              <Ionicons name="arrow-forward" size={24} color="#1E62D0" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => setStage('quiz_intro')} style={styles.startQuizBtn}>
+              <Text style={styles.startQuizBtnText}>Done Reading!</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </ScrollView>
+    );
+  };
 
   // --- RENDER QUIZ GAME (STAGE 3) ---
   const RenderQuiz = () => (
     <View style={styles.gameBox}>
-      {/* Quiz 1: What color is Ben's ball? */}
+      {/* Quiz 1: Picture Comprehension (picture_comp) */}
       {currentSubStep === 0 && (
         <View style={styles.gameCard}>
-          <Text style={styles.instruction}>What color is Ben's ball?</Text>
+          <Text style={styles.instruction}>{activeStory.quizzes[0]?.question || "Comprehension Question"}</Text>
           <View style={styles.focusContainer}>
             <Ionicons name="basketball" size={100} color="#FF6B6B" />
           </View>
           <View style={styles.optionsColumn}>
-            {['Blue', 'Red', 'Green'].map((opt) => (
-              <TouchableOpacity key={opt} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt === 'Red')}>
-                <Text style={styles.optionTextLong}>{opt}</Text>
+            {quiz1Choices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+                <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -539,14 +878,10 @@ const LessonScreen = ({ route, navigation }) => {
       {/* Quiz 2: Sequence */}
       {currentSubStep === 1 && (
         <View style={styles.gameCard}>
-          <Text style={styles.instruction}>What happened first?</Text>
+          <Text style={styles.instruction}>{activeStory.quizzes[1]?.question || "What happened first?"}</Text>
           <View style={styles.optionsColumn}>
-            {[
-              { text: 'Ben played outside', correct: true },
-              { text: 'Ben found the ball', correct: false },
-              { text: 'Ben smiled', correct: false }
-            ].map((opt) => (
-              <TouchableOpacity key={opt.text} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.correct)}>
+            {quiz2Choices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -557,15 +892,15 @@ const LessonScreen = ({ route, navigation }) => {
       {/* Quiz 3: Vocabulary Match */}
       {currentSubStep === 2 && (
         <View style={styles.gameCard}>
-          <Text style={styles.instruction}>Which picture shows BALL?</Text>
+          <Text style={styles.instruction}>{activeStory.quizzes[2]?.question || "Which picture shows?"}</Text>
           <View style={styles.optionsRow}>
-            {[
-              { name: 'car', icon: 'car-sports', correct: false },
-              { name: 'ball', icon: 'basketball', correct: true },
-              { name: 'cookie', icon: 'cookie', correct: false }
-            ].map((opt) => (
-              <TouchableOpacity key={opt.name} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.correct)}>
-                <MaterialCommunityIcons name={opt.icon} size={50} color="#FF6B6B" />
+            {quiz3Choices.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
+                {opt.uri ? (
+                  <Image source={{ uri: opt.uri }} style={styles.choiceImage} />
+                ) : (
+                  <MaterialCommunityIcons name={opt.fallbackIcon} size={50} color="#FF6B6B" />
+                )}
               </TouchableOpacity>
             ))}
           </View>
@@ -577,7 +912,9 @@ const LessonScreen = ({ route, navigation }) => {
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Challenge: Read Aloud!</Text>
           <View style={styles.speakingBox}>
-            <Text style={styles.speakingText}>"Ben has a red ball."</Text>
+            <Text style={styles.speakingText}>
+              "{activeStory.quizzes[3]?.targetSentence || activeStory.sentences[0]?.text}"
+            </Text>
           </View>
           <TouchableOpacity 
             onPress={() => {
@@ -598,7 +935,7 @@ const LessonScreen = ({ route, navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
-      {/* HEADER WITH CONDITIONAL LIVES / PRACTICE BADGE SYSTEM */}
+      {/* HEADER WITH PROGRESS TRACKERS */}
       <SafeAreaView style={styles.header}>
         <TouchableOpacity onPress={() => { Speech.stop(); navigation.goBack(); }}>
           <Ionicons name="close" size={30} color="#B0BEC5" />
@@ -630,7 +967,7 @@ const LessonScreen = ({ route, navigation }) => {
         )}
       </SafeAreaView>
 
-      {/* BACKGROUND FLOATING DECORATIONS */}
+      {/* BACKGROUND DECORATIONS */}
       <View style={styles.bgDecorations} pointerEvents="none">
         <Text style={[styles.bgDecorLetter, { top: '15%', left: '8%', color: '#FF6B6B' }]}>A</Text>
         <Text style={[styles.bgDecorLetter, { top: '18%', right: '12%', color: '#4D96FF' }]}>B</Text>
@@ -641,7 +978,7 @@ const LessonScreen = ({ route, navigation }) => {
         <View style={[styles.bgCircle, { bottom: '38%', left: '20%', width: 22, height: 22, borderRadius: 11, backgroundColor: '#6BCB77' }]} />
       </View>
 
-      {/* RENDERING DYNAMIC APP STAGES */}
+      {/* DYNAMIC SCREEN VIEWPORT */}
       <View style={{ flex: 1, justifyContent: 'center', zIndex: 5 }}>
         {stage === 'exercise_intro' && (
           <RenderIntroScreen 
@@ -659,7 +996,7 @@ const LessonScreen = ({ route, navigation }) => {
           <RenderIntroScreen 
             icon="book-outline"
             title="Great job! Now let's read the story together."
-            description="We are going to read 'Ben and the Red Ball'. You can click words to learn their sounds!"
+            description={`We are going to read '${activeStory.title}'. You can click words to learn their sounds!`}
             buttonText="Are you ready to read?"
             onStart={() => { setStage('story'); setStorySentenceIndex(0); }}
           />
@@ -680,7 +1017,7 @@ const LessonScreen = ({ route, navigation }) => {
         {stage === 'quiz' && <RenderQuiz />}
       </View>
 
-      {/* CENTERED FEEDBACK MODAL (With correct dismiss logic for retries) */}
+      {/* CENTERED FEEDBACK POP-UP */}
       <Modal visible={isCorrect !== null} transparent animationType="fade">
         <View style={styles.centerOverlay}>
           <View style={[styles.feedbackCard, { backgroundColor: isCorrect ? '#78C800' : '#FF5252' }]}>
@@ -876,6 +1213,12 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#E2E8F0',
     marginBottom: 25,
+    overflow: 'hidden', 
+  },
+  focusImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   bigFocusText: {
     fontSize: 65,
@@ -928,6 +1271,13 @@ const styles = StyleSheet.create({
     borderColor: '#D0E1FD',
     borderBottomWidth: 5,
     borderBottomColor: '#B5D3F7',
+    overflow: 'hidden',
+  },
+  choiceImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+    borderRadius: 18,
   },
   optionText: {
     fontSize: 28,
@@ -948,7 +1298,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 5,
     borderBottomColor: '#1E62D0',
-    marginBottom: 25,
+  },
+  studentOptionalImageContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#D0E1FD',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  studentOptionalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   micCircleButton: {
     width: 90,
@@ -1109,6 +1472,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     width: '100%',
   },
+  storyIllustration: {
+    width: '100%',
+    height: 150,
+    borderRadius: 18,
+    resizeMode: 'cover',
+  },
   sentenceWrapper: {
     width: '100%',
     backgroundColor: 'white',
@@ -1268,7 +1637,7 @@ const styles = StyleSheet.create({
     fontWeight: '950',
     color: '#FFFFFF',
   },
-  // --- MATCHING LINE SPECIFIC DESIGN STYLES ---
+  // --- LINE DRAWING STYLES ---
   matchingBoard: {
     width: 290,
     height: 360,
@@ -1292,7 +1661,7 @@ const styles = StyleSheet.create({
   },
   nodeSelectedGlow: {
     borderWidth: 4,
-    borderColor: '#FFD93D', // Yellow highlight border on emulator click selection
+    borderColor: '#FFD93D',
   },
   letterNodeText: {
     fontSize: 32,
@@ -1303,6 +1672,27 @@ const styles = StyleSheet.create({
     height: 8, 
     borderRadius: 4,
     zIndex: 5, 
+  },
+  centerSectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 20,
+  },
+  studentOptionalImageContainer: {
+    width: 90,
+    height: 90,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#D0E1FD',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
+  studentOptionalImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   }
 });
 

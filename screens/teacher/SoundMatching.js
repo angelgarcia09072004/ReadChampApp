@@ -27,7 +27,7 @@ const LIGHT_BG = '#E1BEE7';     // Soft lavender matching sound module
 
 // ── Default State Builder (9 Questions total, Q1 & Q2 pre-populated) ──
 const makeDefault = () =>
-  Array.from({ length: 9 }, (_, i) => {
+  Array.from({ length: 10 }, (_, i) => {
     const num = i + 1;
 
     // Question 1: Pre-populated AI Voice Template with image beside speaker
