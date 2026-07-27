@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
@@ -67,6 +68,75 @@ const makeDefault = () =>
       saved: false,
     };
   });
+
+const getStorageKey = (roomName, scope = 'published') => {
+  const normalizedRoom = `${roomName || 'default'}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalizedRoom
+    ? `${scope}_letter_questions_${normalizedRoom}`
+    : `${scope}_letter_questions_default`;
+};
+
+const normalizeQuestions = (value) => {
+  if (!Array.isArray(value)) return null;
+
+  return value.map((question, index) => ({
+    id: question?.id || `q${index + 1}`,
+    number: question?.number || index + 1,
+    pairCount: question?.pairCount || question?.pairs?.length || 3,
+    pairs: Array.isArray(question?.pairs)
+      ? question.pairs.map((pair, pairIndex) => ({
+          pairId: pair?.pairId || `p${pairIndex + 1}`,
+          uppercase: pair?.uppercase || '',
+          lowercase: pair?.lowercase || '',
+        }))
+      : makePairs(3),
+    saved: Boolean(question?.saved),
+  }));
+};
+
+const mergeQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = makeDefault();
+  const normalizedStored = normalizeQuestions(storedQuestions) || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = normalizedStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || normalizedStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const normalizedPairs = Array.isArray(storedMatch.pairs) && storedMatch.pairs.length > 0
+      ? storedMatch.pairs.map((pair, pairIndex) => ({
+          pairId: pair?.pairId || `p${pairIndex + 1}`,
+          uppercase: pair?.uppercase || '',
+          lowercase: pair?.lowercase || '',
+        }))
+      : defaultQuestion.pairs;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      pairCount: normalizedPairs.length,
+      pairs: normalizedPairs,
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = normalizedStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
 
 // ── Student Preview (mini matching layout) ─────────────────────────
 const StudentPreview = ({ pairs, rightColumnOrder, onShuffle }) => {
@@ -309,6 +379,46 @@ const LetterRecognition = ({ route, navigation }) => {
   const [questions, setQuestions] = useState(() => makeDefault());
   const [publishModal, setPublishModal] = useState(false);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadQuestions = async () => {
+      try {
+        const publishedKey = getStorageKey(roomName, 'published');
+        const draftKey = getStorageKey(roomName, 'draft');
+
+        const [publishedData, draftData] = await Promise.all([
+          AsyncStorage.getItem(publishedKey),
+          AsyncStorage.getItem(draftKey),
+        ]);
+
+        const storedQuestions = JSON.parse(publishedData || draftData || 'null');
+        const mergedQuestions = mergeQuestionsWithDefaults(storedQuestions);
+
+        if (mergedQuestions?.length && isActive) {
+          setQuestions(mergedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load letter recognition content', error);
+      }
+    };
+
+    loadQuestions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [roomName]);
+
+  const persistQuestions = async (nextQuestions, scope = 'draft') => {
+    try {
+      const key = getStorageKey(roomName, scope);
+      await AsyncStorage.setItem(key, JSON.stringify(nextQuestions));
+    } catch (error) {
+      console.warn('Unable to persist letter recognition content', error);
+    }
+  };
+
   const totalQuestionsCount = questions.length;
   const savedCount = questions.filter(q => q.saved).length;
   const progressPercent = totalQuestionsCount > 0 ? (savedCount / totalQuestionsCount) * 100 : 0;
@@ -326,7 +436,11 @@ const LetterRecognition = ({ route, navigation }) => {
   };
 
   const handleSave = (id) => {
-    setQuestions(prev => prev.map(q => q.id === id ? { ...q, saved: true } : q));
+    setQuestions(prev => {
+      const nextQuestions = prev.map(q => q.id === id ? { ...q, saved: true } : q);
+      persistQuestions(nextQuestions, 'draft');
+      return nextQuestions;
+    });
   };
 
   const handleClear = (id) => {
@@ -361,9 +475,29 @@ const LetterRecognition = ({ route, navigation }) => {
     });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishModal(false);
-    Alert.alert('Published! 🎉', `Letter Recognition module for ${roomName} is now live.`);
+    const publishedQuestions = questions.map((question, index) => {
+      const normalizedPairs = Array.isArray(question.pairs)
+        ? question.pairs.map((pair, pairIndex) => ({
+            pairId: pair?.pairId || `p${pairIndex + 1}`,
+            uppercase: pair?.uppercase || '',
+            lowercase: pair?.lowercase || '',
+          }))
+        : makePairs(3);
+
+      return {
+        ...question,
+        id: question.id || `q${index + 1}`,
+        number: question.number || index + 1,
+        pairCount: normalizedPairs.length,
+        pairs: normalizedPairs,
+        saved: Boolean(question.saved),
+      };
+    });
+
+    await persistQuestions(publishedQuestions, 'published');
+    Alert.alert('Published! 🎉', `Letter Recognition module for ${roomName || 'this room'} is now live.`);
   };
 
   return (
@@ -428,7 +562,7 @@ const LetterRecognition = ({ route, navigation }) => {
             onPress={() => savedCount > 0 && setPublishModal(true)}
           >
             <LinearGradient
-              colors={savedCount > 0 ? ['#81D4FA', '#4FC3F7'] : ['#ECEFF1', '#ECEFF1']}
+              colors={savedCount > 0 ? ['#0288D1', '#0288D1'] : ['#ECEFF1', '#ECEFF1']}
               style={styles.publishGrad}
             >
               <Ionicons name="rocket-outline" size={18} color={savedCount > 0 ? 'white' : '#B0BEC5'} />
@@ -454,26 +588,27 @@ const LetterRecognition = ({ route, navigation }) => {
 
             {/* Summary chips */}
             <View style={styles.modalChips}>
-              {questions.filter(q => q.saved).map(q => (
-                <View key={q.id} style={[styles.modalChip, { backgroundColor: '#E3F2FD' }]}>
-                  <Text style={[styles.modalChipText, { color: '#0288D1' }]}>
-                    Q{q.number} · 3 pairs
-                  </Text>
-                </View>
-              ))}
+              {questions.filter(q => q.saved).map((q, index) => (
+  <View key={`chip-${q.id || index}`} style={[styles.modalChip, { backgroundColor: '#E3F2FD' }]}>
+    <Text style={[styles.modalChipText, { color: '#0288D1' }]}>
+      Q{q.number} · 3 pairs
+    </Text>
+  </View>
+))}
             </View>
 
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#F5F5F5' }]}
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#F5F5F5', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }]}
                 onPress={() => setPublishModal(false)}
               >
                 <Text style={[styles.modalBtnText, { color: '#546E7A' }]}>Cancel</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity style={styles.modalBtn} onPress={handlePublish}>
-                <LinearGradient colors={['#81D4FA', '#4FC3F7']} style={styles.modalBtnGrad}>
+                <LinearGradient colors={['#0288D1', '#0288D1']} style={styles.modalBtnGrad}>
                   <Text style={styles.modalBtnText}>Publish</Text>
                 </LinearGradient>
+                
               </TouchableOpacity>
             </View>
           </View>
@@ -919,31 +1054,18 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginBottom: 16,
   },
-  modalChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  modalChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  modalChipText: {
-    fontSize: 12,
-    fontWeight: '800',
-  },
+  
   modalBtnRow: { flexDirection: 'row', gap: 10, width: '100%' },
   modalBtn: {
     flex: 1,
     borderRadius: 14,
     overflow: 'hidden',
+    
   },
   modalBtnGrad: {
     paddingVertical: 14,
     alignItems: 'center',
+    
   },
   modalBtnText: {
     fontWeight: '900',
@@ -951,6 +1073,7 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     paddingVertical: 14,
+    
   },
 });
 

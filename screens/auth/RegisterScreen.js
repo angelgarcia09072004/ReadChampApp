@@ -9,6 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import GameButton from '../../components/GameButton';
 import API from '../../services/api';
 import { COLORS } from '../../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 
 const { width } = Dimensions.get('window');
 
@@ -48,6 +51,10 @@ const RegisterScreen = ({ route, navigation }) => {
         });
 
         if (response.status === 201 || response.status === 204 || response.status === 200) {
+          const user = response.data.user;
+
+          await AsyncStorage.setItem('user', JSON.stringify(user));
+
           Alert.alert("Success! 🏆", "Account created!");
 
           // --- REDIRECT BASED ON ROLE ---

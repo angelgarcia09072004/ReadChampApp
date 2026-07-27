@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -64,6 +65,65 @@ const makeDefault = () =>
       saved: false,
     };
   });
+
+const getStorageKey = (roomName, scope = 'published', module = 'word') => {
+  const normalizedRoom = `${roomName || 'default'}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalizedRoom
+    ? `${scope}_${module}_questions_${normalizedRoom}`
+    : `${scope}_${module}_questions_default`;
+};
+
+const normalizeQuestions = (value) => {
+  if (!Array.isArray(value)) return null;
+
+  return value.map((question, index) => ({
+    id: question?.id || `q${index + 1}`,
+    number: question?.number || index + 1,
+    targetWord: question?.targetWord || '',
+    correctImageUri: question?.correctImageUri || null,
+    distractor1ImageUri: question?.distractor1ImageUri || null,
+    distractor2ImageUri: question?.distractor2ImageUri || null,
+    saved: Boolean(question?.saved),
+  }));
+};
+
+const mergeQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = makeDefault();
+  const normalizedStored = normalizeQuestions(storedQuestions) || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = normalizedStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || normalizedStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      targetWord: storedMatch.targetWord || '',
+      correctImageUri: storedMatch.correctImageUri || null,
+      distractor1ImageUri: storedMatch.distractor1ImageUri || null,
+      distractor2ImageUri: storedMatch.distractor2ImageUri || null,
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = normalizedStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
 
 // ── Student Preview (Word in center, 3 shuffled images below) ──────
 const StudentPreview = ({ 
@@ -370,22 +430,65 @@ const WordMatching = ({ route, navigation }) => {
   const [questions, setQuestions] = useState(() => makeDefault());
   const [publishModal, setPublishModal] = useState(false);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadQuestions = async () => {
+      try {
+        const publishedKey = getStorageKey(roomName, 'published', 'word');
+        const draftKey = getStorageKey(roomName, 'draft', 'word');
+        const [publishedData, draftData] = await Promise.all([
+          AsyncStorage.getItem(publishedKey),
+          AsyncStorage.getItem(draftKey),
+        ]);
+
+        const mergedQuestions = mergeQuestionsWithDefaults(JSON.parse(publishedData || draftData || 'null'));
+        if (mergedQuestions?.length && isActive) {
+          setQuestions(mergedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load word matching content', error);
+      }
+    };
+
+    loadQuestions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [roomName]);
+
+  const persistQuestions = async (nextQuestions, scope = 'draft') => {
+    try {
+      const key = getStorageKey(roomName, scope, 'word');
+      await AsyncStorage.setItem(key, JSON.stringify(nextQuestions));
+    } catch (error) {
+      console.warn('Unable to persist word matching content', error);
+    }
+  };
+
   const totalQuestionsCount = questions.length;
   const savedCount = (questions || []).filter(q => q?.saved).length;
   const progressPercent = totalQuestionsCount > 0 ? (savedCount / totalQuestionsCount) * 100 : 0;
 
   const handleUpdate = (questionId, field, value) => {
-    setQuestions(prev =>
-      (prev || []).map(q =>
+    setQuestions(prev => {
+      const nextQuestions = (prev || []).map(q =>
         q?.id !== questionId
           ? q
           : { ...q, saved: false, [field]: value }
-      )
-    );
+      );
+      persistQuestions(nextQuestions, 'draft');
+      return nextQuestions;
+    });
   };
 
   const handleSave = (id) => {
-    setQuestions(prev => (prev || []).map(q => (q?.id === id ? { ...q, saved: true } : q)));
+    setQuestions(prev => {
+      const nextQuestions = (prev || []).map(q => (q?.id === id ? { ...q, saved: true } : q));
+      persistQuestions(nextQuestions, 'draft');
+      return nextQuestions;
+    });
   };
 
   const handleClear = (id) => {
@@ -395,8 +498,8 @@ const WordMatching = ({ route, navigation }) => {
         text: 'Clear',
         style: 'destructive',
         onPress: () =>
-          setQuestions(prev =>
-            (prev || []).map(q =>
+          setQuestions(prev => {
+            const nextQuestions = (prev || []).map(q =>
               q?.id === id
                 ? {
                     ...q,
@@ -407,8 +510,10 @@ const WordMatching = ({ route, navigation }) => {
                     distractor2ImageUri: null,
                   }
                 : q
-            )
-          ),
+            );
+            persistQuestions(nextQuestions, 'draft');
+            return nextQuestions;
+          }),
       },
     ]);
   };
@@ -416,7 +521,7 @@ const WordMatching = ({ route, navigation }) => {
   const handleAddQuestion = () => {
     setQuestions(prev => {
       const nextNum = prev.length + 1;
-      return [
+      const nextQuestions = [
         ...prev,
         {
           id: `q${nextNum}`,
@@ -428,11 +533,27 @@ const WordMatching = ({ route, navigation }) => {
           saved: false,
         }
       ];
+      persistQuestions(nextQuestions, 'draft');
+      return nextQuestions;
     });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishModal(false);
+    const publishedQuestions = (questions || []).map((question, index) => ({
+      ...question,
+      id: question.id || `q${index + 1}`,
+      number: question.number || index + 1,
+      targetWord: question.targetWord || '',
+      correctImageUri: question.correctImageUri || null,
+      distractor1ImageUri: question.distractor1ImageUri || null,
+      distractor2ImageUri: question.distractor2ImageUri || null,
+      saved: Boolean(question.saved),
+    }));
+
+    await persistQuestions(publishedQuestions, 'published');
+    await persistQuestions(publishedQuestions, 'draft');
+    setQuestions(publishedQuestions);
     Alert.alert('Published! 🎉', `Word Matching module for ${roomName || 'Room'} is now live.`);
   };
 
@@ -531,18 +652,20 @@ const WordMatching = ({ route, navigation }) => {
             </View>
 
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#F5F5F5' }]}
-                onPress={() => setPublishModal(false)}
-              >
-                <Text style={[styles.modalBtnText, { color: '#546E7A' }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtn} onPress={handlePublish}>
-                <LinearGradient colors={[ACCENT_COLOR, '#880E4F']} style={styles.modalBtnGrad}>
-                  <Text style={styles.modalBtnText}>Publish</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#F5F5F5', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }]}
+              onPress={() => setPublishModal(false)}
+            >
+              <Text style={[styles.modalBtnText, { color: '#546E7A' }]}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.modalBtn} onPress={handlePublish}>
+              <LinearGradient colors={[ACCENT_COLOR, '#880E4F']} style={styles.modalBtnGrad}>
+                <Text style={styles.modalBtnText}>Publish</Text>
+              </LinearGradient>
+              
+            </TouchableOpacity>
+          </View>
+
           </View>
         </View>
       </Modal>

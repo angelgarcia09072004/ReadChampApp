@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   Modal,
   Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -67,6 +68,67 @@ const makeDefault = () =>
       saved: false,
     };
   });
+
+const getStorageKey = (roomName, scope = 'published', module = 'picture') => {
+  const normalizedRoom = `${roomName || 'default'}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalizedRoom
+    ? `${scope}_${module}_questions_${normalizedRoom}`
+    : `${scope}_${module}_questions_default`;
+};
+
+const normalizeQuestions = (value) => {
+  if (!Array.isArray(value)) return null;
+
+  return value.map((question, index) => ({
+    id: question?.id || `q${index + 1}`,
+    number: question?.number || index + 1,
+    pairCount: question?.pairCount || 3,
+    imageUri: question?.imageUri || null,
+    correctWord: question?.correctWord || '',
+    distractor1: question?.distractor1 || '',
+    distractor2: question?.distractor2 || '',
+    saved: Boolean(question?.saved),
+  }));
+};
+
+const mergeQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = makeDefault();
+  const normalizedStored = normalizeQuestions(storedQuestions) || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = normalizedStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || normalizedStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      pairCount: storedMatch.pairCount || 3,
+      imageUri: storedMatch.imageUri || null,
+      correctWord: storedMatch.correctWord || '',
+      distractor1: storedMatch.distractor1 || '',
+      distractor2: storedMatch.distractor2 || '',
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = normalizedStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
 
 // ── Student Preview (mini matching layout) ─────────────────────────
 const StudentPreview = ({ imageUri, correctWord, distractor1, distractor2 }) => {
@@ -320,6 +382,45 @@ const PictureMatching = ({ route, navigation }) => {
   const [questions, setQuestions] = useState(() => makeDefault());
   const [publishModal, setPublishModal] = useState(false);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadQuestions = async () => {
+      try {
+        const publishedKey = getStorageKey(roomName, 'published', 'picture');
+        const draftKey = getStorageKey(roomName, 'draft', 'picture');
+
+        const [publishedData, draftData] = await Promise.all([
+          AsyncStorage.getItem(publishedKey),
+          AsyncStorage.getItem(draftKey),
+        ]);
+
+        const mergedQuestions = mergeQuestionsWithDefaults(JSON.parse(publishedData || draftData || 'null'));
+
+        if (mergedQuestions?.length && isActive) {
+          setQuestions(mergedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load picture matching content', error);
+      }
+    };
+
+    loadQuestions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [roomName]);
+
+  const persistQuestions = async (nextQuestions, scope = 'draft') => {
+    try {
+      const key = getStorageKey(roomName, scope, 'picture');
+      await AsyncStorage.setItem(key, JSON.stringify(nextQuestions));
+    } catch (error) {
+      console.warn('Unable to persist picture matching content', error);
+    }
+  };
+
   const totalQuestionsCount = questions.length;
   const savedCount = (questions || []).filter(q => q?.saved).length;
   const progressPercent = totalQuestionsCount > 0 ? (savedCount / totalQuestionsCount) * 100 : 0;
@@ -335,7 +436,11 @@ const PictureMatching = ({ route, navigation }) => {
   };
 
   const handleSave = (id) => {
-    setQuestions(prev => (prev || []).map(q => (q?.id === id ? { ...q, saved: true } : q)));
+    setQuestions(prev => {
+      const nextQuestions = (prev || []).map(q => (q?.id === id ? { ...q, saved: true } : q));
+      persistQuestions(nextQuestions, 'draft');
+      return nextQuestions;
+    });
   };
 
   const handleClear = (id) => {
@@ -382,8 +487,21 @@ const PictureMatching = ({ route, navigation }) => {
     });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishModal(false);
+    const publishedQuestions = questions.map((question, index) => ({
+      ...question,
+      id: question.id || `q${index + 1}`,
+      number: question.number || index + 1,
+      pairCount: question.pairCount || 3,
+      imageUri: question.imageUri || null,
+      correctWord: question.correctWord || '',
+      distractor1: question.distractor1 || '',
+      distractor2: question.distractor2 || '',
+      saved: Boolean(question.saved),
+    }));
+
+    await persistQuestions(publishedQuestions, 'published');
     Alert.alert('Published! 🎉', `Picture Matching module for ${roomName || 'Room'} is now live.`);
   };
 

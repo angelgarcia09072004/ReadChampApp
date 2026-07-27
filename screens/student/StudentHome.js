@@ -69,7 +69,7 @@ const LevelNode = ({ level, onPress, style, isLeft, isRight }) => {
 };
 
 const StudentHome = ({ navigation }) => {
-  const [user, setUser] = useState({ name: 'CHAMPION', points: 0 });
+  const [user, setUser] = useState({ name: 'CHAMPION', points: 0, roomName: 'Room 1' });
 
   useEffect(() => {
     API.get('/user')
@@ -79,6 +79,7 @@ const StudentHome = ({ navigation }) => {
 
   // Safe name check
   const displayName = user.name ? user.name.toUpperCase() : "CHAMPION";
+  const roomName = user.roomName || user.room || 'Room 1';
 
   return (
     <View style={styles.container}>
@@ -123,7 +124,7 @@ const StudentHome = ({ navigation }) => {
               level={lvl} 
               isLeft={isLeft} 
               isRight={isRight}
-              onPress={() => navigation.navigate('LessonScreen', { levelId: lvl })}
+              onPress={() => navigation.navigate('LessonScreen', { levelId: lvl, roomName })}
               style={{ marginLeft: isRight ? 110 : isLeft ? -110 : 0 }}
             />
           );

@@ -18,6 +18,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
 import API from '../../services/api';
 import GameButton from '../../components/GameButton';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -48,7 +49,31 @@ const TeacherHome = ({ navigation }) => {
   const [roomToDelete, setRoomToDelete] = useState(null);
 
   useEffect(() => {
-    API.get('/user').then(res => setTeacherName(res.data.name)).catch(() => {});
+    const loadTeacherName = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('user');
+        if (stored) {
+          const parsedUser = JSON.parse(stored);
+          const savedName = parsedUser?.name || parsedUser?.full_name || parsedUser?.fullName || parsedUser?.username;
+          if (savedName) {
+            setTeacherName(savedName);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Error loading teacher name from storage:', error);
+      }
+
+      try {
+        const response = await API.get('/user');
+        const apiName = response?.data?.name || response?.data?.full_name || response?.data?.fullName || response?.data?.username;
+        if (apiName) setTeacherName(apiName);
+      } catch (error) {
+        console.log('Error loading teacher name from API:', error);
+      }
+    };
+
+    loadTeacherName();
   }, []);
 
   // --- HANDLERS ---
@@ -84,7 +109,7 @@ const TeacherHome = ({ navigation }) => {
           <View style={styles.welcomeBox}>
             <Ionicons name="person-circle-outline" size={50} color="white" />
             <Text style={styles.welcomeLabel}>WELCOME BACK,</Text>
-            <Text style={styles.teacherName}>{teacherName.toUpperCase()}</Text>
+            <Text style={styles.teacherName}>Teacher {teacherName.toUpperCase()}!</Text>
           </View>
 
           {/* 2. MY CLASSES SECTION (WITH RESTORED ADD BUTTON) */}

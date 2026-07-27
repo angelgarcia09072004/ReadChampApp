@@ -1,11 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, StatusBar, Platform, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TeacherProfile = ({ navigation }) => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('user');
+        if (stored) {
+          const parsedUser = JSON.parse(stored);
+          setUser(parsedUser || {});
+        }
+      } catch (error) {
+        console.log('Error loading teacher profile user:', error);
+      }
+    };
+    loadUser();
+  }, []);
+
   const [showToast, setShowToast] = useState(false);
+  const displayName = user?.name || user?.full_name || user?.fullName || user?.username || 'Teacher';
   const teacherID = "READ-T-7721";
 
   const copyCode = () => {
@@ -20,7 +39,7 @@ const TeacherProfile = ({ navigation }) => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.avatarGlow}><View style={styles.avatarInner}><Ionicons name="person" size={60} color={COLORS.primary} /></View></View>
-          <Text style={styles.name}>Ms. Garcia</Text>
+          <Text style={styles.name}>Teacher {displayName}</Text>
           
           <View style={styles.codeCard}>
               <Text style={styles.codeLabel}>YOUR TEACHER CODE</Text>

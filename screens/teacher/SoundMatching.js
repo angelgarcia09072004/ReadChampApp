@@ -20,6 +20,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Audio } from 'expo-av'; 
 import * as DocumentPicker from 'expo-document-picker'; 
 import * as Speech from 'expo-speech'; // Real AI Text-to-Speech package
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../../theme';
 
 const ACCENT_COLOR = '#7B1FA2'; // Deep Purple accent matching sound module
@@ -79,6 +80,84 @@ const getAudioLabel = (uri) => {
     return parts[parts.length - 1] || 'audio_file.wav';
   }
   return `Word Sound: "${uri}"`; // Visual cue for AI voice template
+};
+
+const getStorageKey = (roomName, scope = 'published', module = 'sound') => {
+  const normalizedRoom = `${roomName || 'default'}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalizedRoom
+    ? `${scope}_${module}_questions_${normalizedRoom}`
+    : `${scope}_${module}_questions_default`;
+};
+
+const mergeQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = makeDefault();
+  const normalizedStored = Array.isArray(storedQuestions)
+    ? storedQuestions.map((question, index) => ({
+        id: question?.id || `q${index + 1}`,
+        number: question?.number || index + 1,
+        audioUri: question?.audioUri ?? null,
+        optionalImageUri: question?.optionalImageUri ?? null,
+        correctWord: question?.correctWord ?? '',
+        distractor1: question?.distractor1 ?? '',
+        distractor2: question?.distractor2 ?? '',
+        saved: Boolean(question?.saved),
+      }))
+    : [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const validStored = normalizedStored.filter(
+    question =>
+      question.audioUri ||
+      question.optionalImageUri ||
+      question.correctWord?.trim() ||
+      question.distractor1?.trim() ||
+      question.distractor2?.trim()
+  );
+
+  if (!validStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = validStored.find(
+      question => question.number === defaultQuestion.number || question.id === defaultQuestion.id
+    ) || validStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const hasContent = Boolean(
+      storedMatch.audioUri ||
+      storedMatch.optionalImageUri ||
+      storedMatch.correctWord?.trim() ||
+      storedMatch.distractor1?.trim() ||
+      storedMatch.distractor2?.trim()
+    );
+
+    if (!hasContent) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      audioUri: storedMatch.audioUri ?? defaultQuestion.audioUri ?? null,
+      optionalImageUri: storedMatch.optionalImageUri ?? defaultQuestion.optionalImageUri ?? null,
+      correctWord: storedMatch.correctWord ?? defaultQuestion.correctWord ?? '',
+      distractor1: storedMatch.distractor1 ?? defaultQuestion.distractor1 ?? '',
+      distractor2: storedMatch.distractor2 ?? defaultQuestion.distractor2 ?? '',
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = validStored.filter(
+    question => !merged.some(mergedQuestion => mergedQuestion.id === question.id || mergedQuestion.number === question.number)
+  );
+
+  return [...merged, ...extras];
 };
 
 // ── Student Preview (Word Matching Student UI Layout) ─────────────────
@@ -542,6 +621,30 @@ const SoundMatching = ({ route, navigation }) => {
   const [questions, setQuestions] = useState(() => makeDefault());
   const [publishModal, setPublishModal] = useState(false);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadStoredQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'sound'));
+        if (!storedQuestions) return;
+
+        const parsedQuestions = mergeQuestionsWithDefaults(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published sound questions', error);
+      }
+    };
+
+    loadStoredQuestions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [roomName]);
+
   const totalQuestionsCount = questions.length;
   const savedCount = (questions || []).filter(q => q?.saved).length;
   const progressPercent = totalQuestionsCount > 0 ? (savedCount / totalQuestionsCount) * 100 : 0;
@@ -605,9 +708,29 @@ const SoundMatching = ({ route, navigation }) => {
     });
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
     setPublishModal(false);
-    Alert.alert('Published! 🎉', `Phonics Sound Matching module for ${roomName || 'Room'} is now live.`);
+
+    const publishedQuestions = (questions || []).map((question, index) => ({
+      ...question,
+      id: question?.id || `q${index + 1}`,
+      number: question?.number || index + 1,
+      audioUri: question?.audioUri ?? null,
+      optionalImageUri: question?.optionalImageUri ?? null,
+      correctWord: question?.correctWord ?? '',
+      distractor1: question?.distractor1 ?? '',
+      distractor2: question?.distractor2 ?? '',
+      saved: Boolean(question?.saved),
+    }));
+
+    try {
+      await AsyncStorage.setItem(getStorageKey(roomName, 'published', 'sound'), JSON.stringify(publishedQuestions));
+      setQuestions(publishedQuestions);
+      Alert.alert('Published! 🎉', `Phonics Sound Matching module for ${roomName || 'Room'} is now live.`);
+    } catch (error) {
+      console.warn('Unable to publish sound matching questions', error);
+      Alert.alert('Publish Failed', 'We could not save the sound matching module right now.');
+    }
   };
 
   return (
@@ -705,16 +828,17 @@ const SoundMatching = ({ route, navigation }) => {
             </View>
 
             <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: '#F5F5F5' }]}
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: '#F5F5F5', paddingVertical: 14, alignItems: 'center', justifyContent: 'center' }]}
                 onPress={() => setPublishModal(false)}
               >
                 <Text style={[styles.modalBtnText, { color: '#546E7A' }]}>Cancel</Text>
               </TouchableOpacity>
+              
               <TouchableOpacity style={styles.modalBtn} onPress={handlePublish}>
                 <LinearGradient colors={[ACCENT_COLOR, '#4A148C']} style={styles.modalBtnGrad}>
                   <Text style={styles.modalBtnText}>Publish</Text>
                 </LinearGradient>
+                
               </TouchableOpacity>
             </View>
           </View>

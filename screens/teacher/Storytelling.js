@@ -805,7 +805,7 @@ const Storytelling = ({ route, navigation }) => {
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalConfirmBtn} onPress={handlePublish}>
-                <LinearGradient colors={[ACCENT_COLOR, GOLD_DARK]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmGrad}>
+                <LinearGradient colors={[CHARCOAL, CHARCOAL_LIGHT]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.modalConfirmGrad}>
                   <Text style={styles.modalConfirmText}>Publish</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -1583,32 +1583,37 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginBottom: 18,
   },
-  modalChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  modalChip: {
-    backgroundColor: CHARCOAL,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-  modalChipText: { fontSize: 11, fontWeight: '800', color: ACCENT_COLOR },
+ 
   modalBtnRow: { flexDirection: 'row', gap: 10, width: '100%' },
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 27,
     borderRadius: 14,
     backgroundColor: '#F5F5F5',
     alignItems: 'center',
   },
   modalCancelText: { fontWeight: '800', fontSize: 14, color: '#78909C' },
   modalConfirmBtn: { flex: 1, borderRadius: 14, overflow: 'hidden' },
-  modalConfirmGrad: { paddingVertical: 14, alignItems: 'center' },
-  modalConfirmText: { fontWeight: '900', fontSize: 14, color: CHARCOAL },
+  modalConfirmGrad: { paddingVertical: 27, alignItems: 'center' },
+  modalConfirmText: { fontWeight: '900', fontSize: 14, color: ACCENT_COLOR },
+
+//   modalChips: {
+//   flexDirection: 'row',
+//   flexWrap: 'wrap',
+//   gap: 6,
+//   justifyContent: 'center',
+//   marginBottom: 20,
+// },
+// modalChip: {
+//   paddingHorizontal: 10,
+//   paddingVertical: 5,
+//   borderRadius: 20,
+// },
+// modalChipText: {
+//   fontSize: 12,
+//   fontWeight: '800',
+// },
+
 });
 
 export default Storytelling;

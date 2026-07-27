@@ -3,6 +3,8 @@ import {
   View, Text, StyleSheet, SafeAreaView, TouchableOpacity, 
   Dimensions, Modal, StatusBar, Platform, ScrollView, Animated, PanResponder, Image 
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Speech from 'expo-speech';
@@ -37,64 +39,118 @@ const DEFAULT_LETTER_QUESTIONS = [
 ];
 
 // Fallback picture-matching data matching the teacher's default setups
-const DEFAULT_PICTURE_QUESTIONS = [
-  {
-    id: 'q1',
-    number: 1,
-    imageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300', // Apple
-    correctWord: 'Apple',
-    distractor1: 'Banana',
-    distractor2: 'Orange',
-  },
-  {
-    id: 'q2',
-    number: 2,
-    imageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', // Banana
-    correctWord: 'Banana',
-    distractor1: 'Apple',
-    distractor2: 'Orange',
+const DEFAULT_PICTURE_QUESTIONS = Array.from({ length: 10 }, (_, i) => {
+  const num = i + 1;
+
+  if (num === 1) {
+    return {
+      id: `q${num}`,
+      number: num,
+      imageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300',
+      correctWord: 'Apple',
+      distractor1: 'Banana',
+      distractor2: 'Orange',
+    };
   }
-];
+
+  if (num === 2) {
+    return {
+      id: `q${num}`,
+      number: num,
+      imageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300',
+      correctWord: 'Banana',
+      distractor1: 'Apple',
+      distractor2: 'Orange',
+    };
+  }
+
+  return {
+    id: `q${num}`,
+    number: num,
+    imageUri: null,
+    correctWord: '',
+    distractor1: '',
+    distractor2: '',
+  };
+});
 
 // Fallback word-matching data matching the teacher's default setups
-const DEFAULT_WORD_QUESTIONS = [
-  {
-    id: 'q1',
-    number: 1,
-    targetWord: 'CAT',
-    correctImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200', // Cat
-    distractor1ImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200', // Dog
-    distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200', // Bird
-  },
-  {
-    id: 'q2',
-    number: 2,
-    targetWord: 'DOG',
-    correctImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200', // Dog
-    distractor1ImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200', // Cat
-    distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200', // Bird
+const DEFAULT_WORD_QUESTIONS = Array.from({ length: 10 }, (_, i) => {
+  const num = i + 1;
+
+  if (num === 1) {
+    return {
+      id: 'q1',
+      number: 1,
+      targetWord: 'CAT',
+      correctImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200',
+      distractor1ImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
+      distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200',
+      saved: true,
+    };
   }
-];
+
+  if (num === 2) {
+    return {
+      id: 'q2',
+      number: 2,
+      targetWord: 'DOG',
+      correctImageUri: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=200',
+      distractor1ImageUri: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=200',
+      distractor2ImageUri: 'https://images.unsplash.com/photo-1444464666168-49d633b86797?w=200',
+      saved: true,
+    };
+  }
+
+  return {
+    id: `q${num}`,
+    number: num,
+    targetWord: '',
+    correctImageUri: null,
+    distractor1ImageUri: null,
+    distractor2ImageUri: null,
+    saved: false,
+  };
+});
 
 // Fallback number-matching data matching the teacher's default setups
-const DEFAULT_NUMBER_QUESTIONS = [
-  {
-    id: 'q1',
-    number: 1,
-    targetNumber: '3',
-    correctWord: 'Three',
-    distractor1: 'Two',
-    distractor2: 'Four',
-  },
-  {
-    id: 'q2',
-    number: 2,
-    targetNumber: '5',
-    correctWord: 'Five',
-    distractor1: 'Four',
-    distractor2: 'Six',
+const DEFAULT_NUMBER_QUESTIONS = Array.from({ length: 10 }, (_, i) => {
+  const num = i + 1;
+
+  if (num === 1) {
+    return {
+      id: 'q1',
+      number: 1,
+      targetNumber: '3',
+      correctWord: 'Three',
+      distractor1: 'Two',
+      distractor2: 'Four',
+      saved: true,
+    };
   }
-];
+
+  if (num === 2) {
+    return {
+      id: 'q2',
+      number: 2,
+      targetNumber: '5',
+      correctWord: 'Five',
+      distractor1: 'Four',
+      distractor2: 'Six',
+      saved: true,
+    };
+  }
+
+  return {
+    id: `q${num}`,
+    number: num,
+    targetNumber: '',
+    correctWord: '',
+    distractor1: '',
+    distractor2: '',
+    saved: false,
+  };
+});
 
 // Fallback sound-matching data matching the teacher's default setups
 const DEFAULT_SOUND_QUESTIONS = [
@@ -102,7 +158,7 @@ const DEFAULT_SOUND_QUESTIONS = [
     id: 'q1',
     number: 1,
     audioUri: 'Banana',
-    optionalImageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300', // Banana
+    optionalImageUri: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300',
     correctWord: 'Banana',
     distractor1: 'Apple',
     distractor2: 'Orange',
@@ -111,7 +167,7 @@ const DEFAULT_SOUND_QUESTIONS = [
     id: 'q2',
     number: 2,
     audioUri: 'Apple',
-    optionalImageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300', // Apple
+    optionalImageUri: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300',
     correctWord: 'Apple',
     distractor1: 'Banana',
     distractor2: 'Orange',
@@ -154,6 +210,348 @@ const DEFAULT_STORY_QUESTIONS = [
   }
 ];
 
+const getStorageKey = (roomName, scope = 'published', module = 'letter') => {
+  const normalizedRoom = `${roomName || 'default'}`
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return normalizedRoom
+    ? `${scope}_${module}_questions_${normalizedRoom}`
+    : `${scope}_${module}_questions_default`;
+};
+
+const normalizeQuestions = (value, module = 'letter') => {
+  if (!Array.isArray(value)) return null;
+
+  if (module === 'picture') {
+    return value.map((question, index) => ({
+      id: question?.id || `q${index + 1}`,
+      number: question?.number || index + 1,
+      pairCount: question?.pairCount || 3,
+      imageUri: question?.imageUri || null,
+      correctWord: question?.correctWord || '',
+      distractor1: question?.distractor1 || '',
+      distractor2: question?.distractor2 || '',
+      saved: Boolean(question?.saved),
+    }));
+  }
+
+  if (module === 'word') {
+    return value.map((question, index) => ({
+      id: question?.id || `q${index + 1}`,
+      number: question?.number || index + 1,
+      targetWord: question?.targetWord || '',
+      correctImageUri: question?.correctImageUri || null,
+      distractor1ImageUri: question?.distractor1ImageUri || null,
+      distractor2ImageUri: question?.distractor2ImageUri || null,
+      saved: Boolean(question?.saved),
+    }));
+  }
+
+  if (module === 'number_word') {
+    return value.map((question, index) => ({
+      id: question?.id || `q${index + 1}`,
+      number: question?.number || index + 1,
+      targetNumber: question?.targetNumber || '',
+      correctWord: question?.correctWord || '',
+      distractor1: question?.distractor1 || '',
+      distractor2: question?.distractor2 || '',
+      saved: Boolean(question?.saved),
+    }));
+  }
+
+  if (module === 'sound') {
+    return value.map((question, index) => ({
+      id: question?.id || `q${index + 1}`,
+      number: question?.number || index + 1,
+      audioUri: question?.audioUri || null,
+      optionalImageUri: question?.optionalImageUri || null,
+      correctWord: question?.correctWord || '',
+      distractor1: question?.distractor1 || '',
+      distractor2: question?.distractor2 || '',
+      saved: Boolean(question?.saved),
+    }));
+  }
+
+
+  
+  return value.map((question, index) => ({
+    id: question?.id || `q${index + 1}`,
+    number: question?.number || index + 1,
+    pairCount: question?.pairCount || question?.pairs?.length || 3,
+    pairs: Array.isArray(question?.pairs)
+      ? question.pairs.map((pair, pairIndex) => ({
+          pairId: pair?.pairId || `p${pairIndex + 1}`,
+          uppercase: pair?.uppercase || '',
+          lowercase: pair?.lowercase || '',
+        }))
+      : [],
+    saved: Boolean(question?.saved),
+  }));
+};
+
+const mergePictureQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = DEFAULT_PICTURE_QUESTIONS;
+  const normalizedStored = normalizeQuestions(storedQuestions, 'picture') || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const validStored = normalizedStored.filter(
+    q => q.imageUri || q.correctWord?.trim() || q.distractor1?.trim() || q.distractor2?.trim()
+  );
+
+  if (!validStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = validStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || validStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const hasContent = Boolean(
+      storedMatch.imageUri ||
+      storedMatch.correctWord?.trim() ||
+      storedMatch.distractor1?.trim() ||
+      storedMatch.distractor2?.trim()
+    );
+
+    if (!hasContent) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      imageUri: storedMatch.imageUri || defaultQuestion.imageUri || null,
+      correctWord: storedMatch.correctWord || defaultQuestion.correctWord || '',
+      distractor1: storedMatch.distractor1 || defaultQuestion.distractor1 || '',
+      distractor2: storedMatch.distractor2 || defaultQuestion.distractor2 || '',
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = validStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
+
+const getMatchingWordQuestion = (questions, levelId) => {
+  const normalizedQuestions = Array.isArray(questions) ? questions : [];
+  const numericLevelId = Number(levelId);
+
+  const directMatch = normalizedQuestions.find(
+    q =>
+      q?.number === numericLevelId ||
+      q?.number === levelId ||
+      q?.id === `q${numericLevelId}` ||
+      q?.id === levelId
+  );
+
+  if (directMatch) return directMatch;
+
+  const firstFilledQuestion = normalizedQuestions.find(
+    q =>
+      q?.targetWord?.trim() ||
+      q?.correctImageUri ||
+      q?.distractor1ImageUri ||
+      q?.distractor2ImageUri
+  );
+
+  return firstFilledQuestion || normalizedQuestions[0] || DEFAULT_WORD_QUESTIONS[0];
+};
+
+const mergeWordQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = DEFAULT_WORD_QUESTIONS;
+  const normalizedStored = normalizeQuestions(storedQuestions, 'word') || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const validStored = normalizedStored.filter(
+    q => q.targetWord?.trim() || q.correctImageUri || q.distractor1ImageUri || q.distractor2ImageUri
+  );
+
+  if (!validStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = validStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || validStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const hasContent = Boolean(
+      storedMatch.targetWord?.trim() ||
+      storedMatch.correctImageUri ||
+      storedMatch.distractor1ImageUri ||
+      storedMatch.distractor2ImageUri
+    );
+
+    if (!hasContent) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      targetWord: storedMatch.targetWord || '',
+      correctImageUri: storedMatch.correctImageUri || null,
+      distractor1ImageUri: storedMatch.distractor1ImageUri || null,
+      distractor2ImageUri: storedMatch.distractor2ImageUri || null,
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = validStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
+
+const getMatchingNumberQuestion = (questions, levelId) => {
+  const normalizedQuestions = Array.isArray(questions) ? questions : [];
+  const numericLevelId = Number(levelId);
+
+  const directMatch = normalizedQuestions.find(
+    q =>
+      q?.number === numericLevelId ||
+      q?.number === levelId ||
+      q?.id === `q${numericLevelId}` ||
+      q?.id === levelId
+  );
+
+  if (directMatch) return directMatch;
+
+  const firstFilledQuestion = normalizedQuestions.find(
+    q =>
+      q?.targetNumber?.trim() ||
+      q?.correctWord?.trim() ||
+      q?.distractor1?.trim() ||
+      q?.distractor2?.trim()
+  );
+
+  return firstFilledQuestion || normalizedQuestions[0] || DEFAULT_NUMBER_QUESTIONS[0];
+};
+
+const mergeNumberQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = DEFAULT_NUMBER_QUESTIONS;
+  const normalizedStored = normalizeQuestions(storedQuestions, 'number_word') || [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const validStored = normalizedStored.filter(
+    q => q.targetNumber?.trim() || q.correctWord?.trim() || q.distractor1?.trim() || q.distractor2?.trim()
+  );
+
+  if (!validStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = validStored.find(
+      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+    ) || validStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const hasContent = Boolean(
+      storedMatch.targetNumber?.trim() ||
+      storedMatch.correctWord?.trim() ||
+      storedMatch.distractor1?.trim() ||
+      storedMatch.distractor2?.trim()
+    );
+
+    if (!hasContent) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      targetNumber: storedMatch.targetNumber || '',
+      correctWord: storedMatch.correctWord || '',
+      distractor1: storedMatch.distractor1 || '',
+      distractor2: storedMatch.distractor2 || '',
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = validStored.filter(
+    q => !merged.some(mergedQuestion => mergedQuestion.id === q.id || mergedQuestion.number === q.number)
+  );
+
+  return [...merged, ...extras];
+};
+
+const mergeSoundQuestionsWithDefaults = (storedQuestions) => {
+  const defaults = DEFAULT_SOUND_QUESTIONS;
+  const normalizedStored = Array.isArray(storedQuestions)
+    ? storedQuestions.map((question, index) => ({
+        id: question?.id || `q${index + 1}`,
+        number: question?.number || index + 1,
+        audioUri: question?.audioUri ?? null,
+        optionalImageUri: question?.optionalImageUri ?? null,
+        correctWord: question?.correctWord ?? '',
+        distractor1: question?.distractor1 ?? '',
+        distractor2: question?.distractor2 ?? '',
+        saved: Boolean(question?.saved),
+      }))
+    : [];
+
+  if (!normalizedStored.length) return defaults;
+
+  const validStored = normalizedStored.filter(
+    question =>
+      question.audioUri ||
+      question.optionalImageUri ||
+      question.correctWord?.trim() ||
+      question.distractor1?.trim() ||
+      question.distractor2?.trim()
+  );
+
+  if (!validStored.length) return defaults;
+
+  const merged = defaults.map((defaultQuestion, index) => {
+    const storedMatch = validStored.find(
+      question => question.number === defaultQuestion.number || question.id === defaultQuestion.id
+    ) || validStored[index];
+
+    if (!storedMatch) return defaultQuestion;
+
+    const hasContent = Boolean(
+      storedMatch.audioUri ||
+      storedMatch.optionalImageUri ||
+      storedMatch.correctWord?.trim() ||
+      storedMatch.distractor1?.trim() ||
+      storedMatch.distractor2?.trim()
+    );
+
+    if (!hasContent) return defaultQuestion;
+
+    return {
+      ...defaultQuestion,
+      ...storedMatch,
+      id: storedMatch.id || defaultQuestion.id,
+      number: storedMatch.number || defaultQuestion.number,
+      audioUri: storedMatch.audioUri ?? defaultQuestion.audioUri ?? null,
+      optionalImageUri: storedMatch.optionalImageUri ?? defaultQuestion.optionalImageUri ?? null,
+      correctWord: storedMatch.correctWord ?? defaultQuestion.correctWord ?? '',
+      distractor1: storedMatch.distractor1 ?? defaultQuestion.distractor1 ?? '',
+      distractor2: storedMatch.distractor2 ?? defaultQuestion.distractor2 ?? '',
+      saved: Boolean(storedMatch.saved),
+    };
+  });
+
+  const extras = validStored.filter(
+    question => !merged.some(mergedQuestion => mergedQuestion.id === question.id || mergedQuestion.number === question.number)
+  );
+
+  return [...merged, ...extras];
+};
+
 const DrawConnectingLine = ({ p1, p2, color }) => {
   if (!p1 || !p2) return null;
   const dx = p2.x - p1.x;
@@ -180,7 +578,6 @@ const DrawConnectingLine = ({ p1, p2, color }) => {
 };
 
 const LessonScreen = ({ route, navigation }) => {
-  // Retrieve level configuration and dynamic arrays from teacher modules
   const { 
     levelId = 1, 
     letterQuestions, 
@@ -188,18 +585,163 @@ const LessonScreen = ({ route, navigation }) => {
     wordQuestions,
     numberQuestions,
     soundQuestions,
-    storyQuestions
+    storyQuestions,
+    roomName,
   } = route.params || {};
 
+  const [publishedLetterQuestions, setPublishedLetterQuestions] = useState(letterQuestions || null);
+  const [publishedPictureQuestions, setPublishedPictureQuestions] = useState(pictureQuestions || null);
+  const [publishedWordQuestions, setPublishedWordQuestions] = useState(wordQuestions || null);
+  const [publishedNumberQuestions, setPublishedNumberQuestions] = useState(numberQuestions || null);
+  const [publishedSoundQuestions, setPublishedSoundQuestions] = useState(soundQuestions || null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadLetterQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'letter'));
+        if (!storedQuestions) return;
+        const parsedQuestions = normalizeQuestions(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setPublishedLetterQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published letter questions', error);
+      }
+    };
+
+    const loadPictureQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'picture'));
+        if (!storedQuestions) return;
+        const parsedQuestions = mergePictureQuestionsWithDefaults(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setPublishedPictureQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published picture questions', error);
+      }
+    };
+
+    const loadWordQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'word'));
+        if (!storedQuestions) return;
+        const parsedQuestions = mergeWordQuestionsWithDefaults(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setPublishedWordQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published word questions', error);
+      }
+    };
+
+    const loadNumberQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'number_word'));
+        if (!storedQuestions) return;
+        const parsedQuestions = mergeNumberQuestionsWithDefaults(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setPublishedNumberQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published number questions', error);
+      }
+    };
+
+    const loadSoundQuestions = async () => {
+      try {
+        const storedQuestions = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'sound'));
+        if (!storedQuestions) return;
+        const parsedQuestions = mergeSoundQuestionsWithDefaults(JSON.parse(storedQuestions));
+        if (parsedQuestions?.length && isActive) {
+          setPublishedSoundQuestions(parsedQuestions);
+        }
+      } catch (error) {
+        console.warn('Unable to load published sound questions', error);
+      }
+    };
+
+    loadLetterQuestions();
+    loadPictureQuestions();
+    loadWordQuestions();
+    loadNumberQuestions();
+    loadSoundQuestions();
+
+    return () => {
+      isActive = false;
+    };
+  }, [roomName]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshQuestions = async () => {
+        try {
+          const letterQuestionsData = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'letter'));
+          if (letterQuestionsData) {
+            const parsedQuestions = normalizeQuestions(JSON.parse(letterQuestionsData));
+            if (parsedQuestions?.length) {
+              setPublishedLetterQuestions(parsedQuestions);
+            }
+          }
+
+          const pictureQuestionsData = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'picture'));
+          if (pictureQuestionsData) {
+            const parsedQuestions = mergePictureQuestionsWithDefaults(JSON.parse(pictureQuestionsData));
+            if (parsedQuestions?.length) {
+              setPublishedPictureQuestions(parsedQuestions);
+            }
+          }
+
+          const wordQuestionsData = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'word'));
+          if (wordQuestionsData) {
+            const parsedQuestions = mergeWordQuestionsWithDefaults(JSON.parse(wordQuestionsData));
+            if (parsedQuestions?.length) {
+              setPublishedWordQuestions(parsedQuestions);
+            }
+          }
+
+          const numberQuestionsData = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'number_word'));
+          if (numberQuestionsData) {
+            const parsedQuestions = mergeNumberQuestionsWithDefaults(JSON.parse(numberQuestionsData));
+            if (parsedQuestions?.length) {
+              setPublishedNumberQuestions(parsedQuestions);
+            }
+          }
+
+          const soundQuestionsData = await AsyncStorage.getItem(getStorageKey(roomName, 'published', 'sound'));
+          if (soundQuestionsData) {
+            const parsedQuestions = mergeSoundQuestionsWithDefaults(JSON.parse(soundQuestionsData));
+            if (parsedQuestions?.length) {
+              setPublishedSoundQuestions(parsedQuestions);
+            }
+          }
+        } catch (error) {
+          console.warn('Unable to refresh published questions', error);
+        }
+      };
+
+      refreshQuestions();
+    }, [roomName])
+  );
+
   // Active question extraction based on selected level number
-  const activeLetterQuestions = letterQuestions || DEFAULT_LETTER_QUESTIONS;
+  const activeLetterQuestions = publishedLetterQuestions || letterQuestions || DEFAULT_LETTER_QUESTIONS;
   const activeLetterQuestion = activeLetterQuestions.find(q => q.number === levelId) || activeLetterQuestions[0];
   const activePairs = activeLetterQuestion.pairs || [];
 
-  const activePicQuestion = (pictureQuestions || DEFAULT_PICTURE_QUESTIONS).find(q => q.number === levelId) || DEFAULT_PICTURE_QUESTIONS[0];
-  const activeWordQuestion = (wordQuestions || DEFAULT_WORD_QUESTIONS).find(q => q.number === levelId) || DEFAULT_WORD_QUESTIONS[0];
-  const activeNumQuestion = (numberQuestions || DEFAULT_NUMBER_QUESTIONS).find(q => q.number === levelId) || DEFAULT_NUMBER_QUESTIONS[0];
-  const activeSoundQuestion = (soundQuestions || DEFAULT_SOUND_QUESTIONS).find(q => q.number === levelId) || DEFAULT_SOUND_QUESTIONS[0];
+  const activePicQuestion = (publishedPictureQuestions || pictureQuestions || DEFAULT_PICTURE_QUESTIONS)
+    .find(q => q.number === levelId) || (publishedPictureQuestions || pictureQuestions || DEFAULT_PICTURE_QUESTIONS)[0] || DEFAULT_PICTURE_QUESTIONS[0];
+  const activeWordQuestion = getMatchingWordQuestion(
+    publishedWordQuestions || wordQuestions || DEFAULT_WORD_QUESTIONS,
+    levelId
+  );
+  const activeNumQuestion = getMatchingNumberQuestion(
+    publishedNumberQuestions || numberQuestions || DEFAULT_NUMBER_QUESTIONS,
+    levelId
+  );
+  const activeSoundQuestion = (publishedSoundQuestions || soundQuestions || DEFAULT_SOUND_QUESTIONS).find(q => q.number === levelId) || DEFAULT_SOUND_QUESTIONS[0];
   
   const activeStoryQuestions = storyQuestions || DEFAULT_STORY_QUESTIONS;
   const activeStory = activeStoryQuestions.find(s => s.number === levelId) || activeStoryQuestions[0];
@@ -219,14 +761,13 @@ const LessonScreen = ({ route, navigation }) => {
   const [feedbackMsg, setFeedbackMsg] = useState("");
 
   // --- LINE MATCHING STATE ---
-  const [connections, setConnections] = useState([]); // [{ from, to, color }]
-  const [activeDragLine, setActiveDragLine] = useState(null); // { fromNode, startPt, endPt }
-  const [selectedLeftNode, setSelectedLeftNode] = useState(null); // Highlight for tap connections
+  const [connections, setConnections] = useState([]);
+  const [activeDragLine, setActiveDragLine] = useState(null);
+  const [selectedLeftNode, setSelectedLeftNode] = useState(null);
 
   // --- DYNAMIC DATA & COORDINATE COMPUTATION ---
   const leftItems = useMemo(() => activePairs.map(p => p.uppercase), [activePairs]);
 
-  // Shuffled sequence for lowercase characters (computed once on level mount)
   const [rightItems, setRightItems] = useState([]);
   useEffect(() => {
     if (activePairs.length > 0) {
@@ -349,7 +890,6 @@ const LessonScreen = ({ route, navigation }) => {
     return list;
   }, [activeStory]);
 
-  // Dynamic coordinate points calculated mathematically based on list index
   const leftCoords = useMemo(() => {
     const coords = {};
     leftItems.forEach((item, index) => {
@@ -366,7 +906,6 @@ const LessonScreen = ({ route, navigation }) => {
     return coords;
   }, [rightItems]);
 
-  // Dynamic pairings maps
   const correctMatches = useMemo(() => {
     const map = {};
     activePairs.forEach(p => {
@@ -384,14 +923,12 @@ const LessonScreen = ({ route, navigation }) => {
     return colors;
   }, [leftItems]);
 
-  // Reset line matches when substeps or stages shift
   useEffect(() => {
     setConnections([]);
     setActiveDragLine(null);
     setSelectedLeftNode(null);
   }, [currentSubStep, stage]);
 
-  // Highlight index for active words during story narration
   const [highlightedWordIndex, setHighlightedWordIndex] = useState(-1);
 
   useEffect(() => {
@@ -479,29 +1016,21 @@ const LessonScreen = ({ route, navigation }) => {
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: () => {
         const startPt = leftCoords[nodeKey];
-        setActiveDragLine({
-          fromNode: nodeKey,
-          startPt,
-          endPt: startPt
-        });
+        setActiveDragLine({ fromNode: nodeKey, startPt, endPt: startPt });
         setSelectedLeftNode(nodeKey);
       },
       onPanResponderMove: (e, gestureState) => {
         const startPt = leftCoords[nodeKey];
-        const currentX = startPt.x + gestureState.dx;
-        const currentY = startPt.y + gestureState.dy;
-
         setActiveDragLine({
           fromNode: nodeKey,
           startPt,
-          endPt: { x: currentX, y: currentY }
+          endPt: { x: startPt.x + gestureState.dx, y: startPt.y + gestureState.dy }
         });
       },
       onPanResponderRelease: (e, gestureState) => {
         const startPt = leftCoords[nodeKey];
         const endX = startPt.x + gestureState.dx;
         const endY = startPt.y + gestureState.dy;
-
         const isTap = Math.sqrt(gestureState.dx ** 2 + gestureState.dy ** 2) < 8;
 
         if (isTap) {
@@ -512,9 +1041,7 @@ const LessonScreen = ({ route, navigation }) => {
           Object.keys(rightCoords).forEach((key) => {
             const rPt = rightCoords[key];
             const dist = Math.sqrt((endX - rPt.x) ** 2 + (endY - rPt.y) ** 2);
-            if (dist < 45) {
-              matchedRightKey = key;
-            }
+            if (dist < 45) matchedRightKey = key;
           });
 
           if (matchedRightKey) {
@@ -528,7 +1055,6 @@ const LessonScreen = ({ route, navigation }) => {
     });
   };
 
-  // Tap-to-Connect fallback for emulator accessibility
   const handleRightNodePress = (rightKey) => {
     if (selectedLeftNode) {
       handleCompleteMatch(selectedLeftNode, rightKey);
@@ -558,7 +1084,6 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
-  // Dual playback audio executor: plays voice recording or synthesizes text templates
   const playExerciseAudio = async () => {
     if (!activeSoundQuestion?.audioUri) return;
     try {
@@ -574,9 +1099,7 @@ const LessonScreen = ({ route, navigation }) => {
           { shouldPlay: true }
         );
         sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.didJustFinish) {
-            sound.unloadAsync();
-          }
+          if (status.didJustFinish) sound.unloadAsync();
         });
       } else {
         speak(activeSoundQuestion.audioUri, 0.8);
@@ -586,7 +1109,6 @@ const LessonScreen = ({ route, navigation }) => {
     }
   };
 
-  // --- STORY FUNCTIONS ---
   const handleWordTap = (word) => {
     const cleanWord = word.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
     speak(cleanWord, 0.75);
@@ -600,14 +1122,10 @@ const LessonScreen = ({ route, navigation }) => {
     speak(sentence, 0.8);
 
     words.forEach((_, index) => {
-      setTimeout(() => {
-        setHighlightedWordIndex(index);
-      }, index * 450);
+      setTimeout(() => setHighlightedWordIndex(index), index * 450);
     });
 
-    setTimeout(() => {
-      setHighlightedWordIndex(-1);
-    }, words.length * 480);
+    setTimeout(() => setHighlightedWordIndex(-1), words.length * 480);
   };
 
   // --- RENDER INTROS ---
@@ -619,7 +1137,6 @@ const LessonScreen = ({ route, navigation }) => {
         </View>
         <Text style={styles.introTitle}>{title}</Text>
         <Text style={styles.introDescription}>{description}</Text>
-        
         <TouchableOpacity style={styles.introButton} onPress={onStart}>
           <View style={styles.introButtonInner}>
             <Text style={styles.introButtonText}>{buttonText}</Text>
@@ -633,23 +1150,20 @@ const LessonScreen = ({ route, navigation }) => {
   // --- RENDER EXERCISES (STAGE 1) ---
   const RenderExercise = () => (
     <View style={styles.gameBox}>
-      {/* Ex 1: Letter Line Matching (Reflects Teacher configurations dynamically) */}
+      {/* Ex 1: Letter Line Matching */}
       {currentSubStep === 0 && (
         <View style={styles.gameCardLarge}>
           <Text style={styles.instruction}>Draw lines to match the letters!</Text>
-          
           <View style={styles.matchingBoard}>
-            {/* Draw active connected lines dynamically */}
             {connections.map((c, i) => (
               <DrawConnectingLine 
-                key={i} 
+                key={`line-${i}`} 
                 p1={leftCoords[c.from]} 
                 p2={rightCoords[c.to]} 
                 color={c.color} 
               />
             ))}
 
-            {/* Draw active drag path preview line */}
             {activeDragLine && (
               <DrawConnectingLine 
                 p1={activeDragLine.startPt} 
@@ -658,13 +1172,12 @@ const LessonScreen = ({ route, navigation }) => {
               />
             )}
 
-            {/* Render left-hand column nodes dynamically */}
             {leftItems.map((item, index) => {
               const isSelected = selectedLeftNode === item;
               const isConnected = connections.some(c => c.from === item);
               return (
                 <View 
-                  key={item}
+                  key={`left-${item}-${index}`}
                   style={[
                     styles.nodeContainer, 
                     { left: 10, top: 20 + index * 120 },
@@ -678,7 +1191,6 @@ const LessonScreen = ({ route, navigation }) => {
               );
             })}
 
-            {/* Render right-hand column nodes dynamically (shuffled) */}
             {rightItems.map((item, index) => {
               const isConnected = connections.some(c => c.to === item);
               const matchingLeftItem = leftItems.find(l => correctMatches[l] === item);
@@ -687,13 +1199,10 @@ const LessonScreen = ({ route, navigation }) => {
 
               return (
                 <TouchableOpacity 
-                  key={item}
+                  key={`right-${item}-${index}`}
                   activeOpacity={0.8}
                   onPress={() => handleRightNodePress(item)}
-                  style={[
-                    styles.nodeContainer, 
-                    { right: 10, top: 20 + index * 120, borderColor }
-                  ]}
+                  style={[styles.nodeContainer, { right: 10, top: 20 + index * 120, borderColor }]}
                 >
                   <Text style={[styles.letterNodeText, { color: textColor }]}>{item}</Text>
                 </TouchableOpacity>
@@ -703,7 +1212,7 @@ const LessonScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      {/* Ex 2: Picture Matching (Dynamically displays teacher's configured picture) */}
+      {/* Ex 2: Picture Matching */}
       {currentSubStep === 1 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Picture Matching</Text>
@@ -716,7 +1225,7 @@ const LessonScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.optionsColumn}>
             {picChoices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`pic-${idx}`} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -724,7 +1233,7 @@ const LessonScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      {/* Ex 3: Word Matching (Dynamically displays teacher's configured word and choices) */}
+      {/* Ex 3: Word Matching */}
       {currentSubStep === 2 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Word Matching</Text>
@@ -733,7 +1242,7 @@ const LessonScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.optionsRow}>
             {wordChoices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`word-${idx}`} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
                 {opt.uri ? (
                   <Image source={{ uri: opt.uri }} style={styles.choiceImage} />
                 ) : (
@@ -745,7 +1254,7 @@ const LessonScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      {/* Ex 4: Number Matching (Dynamically displays teacher's configured numeral and choices) */}
+      {/* Ex 4: Number Matching */}
       {currentSubStep === 3 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Number Matching</Text>
@@ -754,7 +1263,7 @@ const LessonScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.optionsColumn}>
             {numChoices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`num-${idx}`} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -762,7 +1271,7 @@ const LessonScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      {/* Ex 5: Phonics Sound Matching (Dynamically executes custom voice and features side-by-side optional image) */}
+      {/* Ex 5: Phonics Sound Matching */}
       {currentSubStep === 4 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>Phonics Sound Matching</Text>
@@ -778,7 +1287,7 @@ const LessonScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.optionsColumn}>
             {soundChoices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`sound-${idx}`} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -812,7 +1321,7 @@ const LessonScreen = ({ route, navigation }) => {
           <View style={styles.wordPillContainer}>
             {currentSentence.text.split(" ").map((word, idx) => (
               <TouchableOpacity 
-                key={idx} 
+                key={`story-word-${storySentenceIndex}-${idx}`}
                 onPress={() => handleWordTap(word)}
                 style={[
                   styles.wordPill,
@@ -858,7 +1367,7 @@ const LessonScreen = ({ route, navigation }) => {
   // --- RENDER QUIZ GAME (STAGE 3) ---
   const RenderQuiz = () => (
     <View style={styles.gameBox}>
-      {/* Quiz 1: Picture Comprehension (picture_comp) */}
+      {/* Quiz 1: Picture Comprehension */}
       {currentSubStep === 0 && (
         <View style={styles.gameCard}>
           <Text style={styles.instruction}>{activeStory.quizzes[0]?.question || "Comprehension Question"}</Text>
@@ -867,7 +1376,7 @@ const LessonScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.optionsColumn}>
             {quiz1Choices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`q1-${idx}`} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -881,7 +1390,7 @@ const LessonScreen = ({ route, navigation }) => {
           <Text style={styles.instruction}>{activeStory.quizzes[1]?.question || "What happened first?"}</Text>
           <View style={styles.optionsColumn}>
             {quiz2Choices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`q2-${idx}`} style={styles.tactileOptionLong} onPress={() => handleAnswer(opt.isCorrect)}>
                 <Text style={styles.optionTextLong}>{opt.text}</Text>
               </TouchableOpacity>
             ))}
@@ -895,7 +1404,7 @@ const LessonScreen = ({ route, navigation }) => {
           <Text style={styles.instruction}>{activeStory.quizzes[2]?.question || "Which picture shows?"}</Text>
           <View style={styles.optionsRow}>
             {quiz3Choices.map((opt, idx) => (
-              <TouchableOpacity key={idx} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
+              <TouchableOpacity key={`q3-${idx}`} style={styles.tactileIconOption} onPress={() => handleAnswer(opt.isCorrect)}>
                 {opt.uri ? (
                   <Image source={{ uri: opt.uri }} style={styles.choiceImage} />
                 ) : (
@@ -1023,10 +1532,7 @@ const LessonScreen = ({ route, navigation }) => {
           <View style={[styles.feedbackCard, { backgroundColor: isCorrect ? '#78C800' : '#FF5252' }]}>
             <Text style={styles.feedbackText}>{isCorrect ? feedbackMsg : "TRY AGAIN!"}</Text>
             {isCorrect && <Text style={styles.xpGain}>+10 XP ✨</Text>}
-            <TouchableOpacity 
-              style={styles.popBtn} 
-              onPress={handleFeedbackDismiss}
-            >
+            <TouchableOpacity style={styles.popBtn} onPress={handleFeedbackDismiss}>
               <Text style={{ fontWeight: '900', color: isCorrect ? '#78C800' : '#FF5252' }}>
                 {isCorrect ? "CONTINUE" : "TRY AGAIN"}
               </Text>
@@ -1075,12 +1581,10 @@ const LessonScreen = ({ route, navigation }) => {
                 <Text style={styles.statVal}>{5 - lives}</Text>
               </View>
             </View>
-            
             <View style={styles.badgeBox}>
               <MaterialCommunityIcons name="trophy-variant" size={50} color="#FFA000" />
               <Text style={styles.badgeName}>Level 1 Reading Hero Unlocked!</Text>
             </View>
-            
             <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
               <Text style={styles.doneText}>FINISH</Text>
             </TouchableOpacity>
@@ -1407,9 +1911,7 @@ const styles = StyleSheet.create({
     padding: 15, 
     borderRadius: 20 
   },
-  statItem: { 
-    alignItems: 'center' 
-  },
+  statItem: { alignItems: 'center' },
   statLabel: { 
     color: 'white', 
     fontSize: 10, 
@@ -1680,20 +2182,6 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 20,
   },
-  studentOptionalImageContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#D0E1FD',
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
-  studentOptionalImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  }
 });
 
 export default LessonScreen;

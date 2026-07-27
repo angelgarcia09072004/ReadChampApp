@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import GameButton from '../../components/GameButton';
 import { COLORS } from '../../theme';
 import API from '../../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -39,8 +40,10 @@ const LoginScreen = ({ navigation }) => {
       });
 
       if (response.status === 200) {
-        const user = response.data.user; 
-        
+        const user = response.data.user;
+
+        await AsyncStorage.setItem('user', JSON.stringify(user));
+
         // 2. Navigate based on the role the DATABASE says you are
         if (user.role === 'student') navigation.replace('MainTabs');
         else if (user.role === 'teacher') navigation.replace('TeacherTabs');
