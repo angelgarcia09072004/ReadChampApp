@@ -102,10 +102,10 @@ const mergeQuestionsWithDefaults = (storedQuestions) => {
 
   if (!normalizedStored.length) return defaults;
 
-  const merged = defaults.map((defaultQuestion, index) => {
+    const merged = defaults.map((defaultQuestion) => {
     const storedMatch = normalizedStored.find(
       q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
-    ) || normalizedStored[index];
+    ); // no positional fallback
 
     if (!storedMatch) return defaultQuestion;
 

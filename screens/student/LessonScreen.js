@@ -292,6 +292,27 @@ const normalizeQuestions = (value, module = 'letter') => {
   }));
 };
 
+const hasLetterPairContent = (q) =>
+  Array.isArray(q?.pairs) &&
+  q.pairs.some(p => p?.uppercase?.trim() && p?.lowercase?.trim());
+
+const getMatchingLetterQuestion = (questions, levelId) => {
+  const normalizedQuestions = Array.isArray(questions) ? questions : [];
+  const numericLevelId = Number(levelId);
+
+  const directMatch = normalizedQuestions.find(
+    q =>
+      (q?.number === numericLevelId || q?.number === levelId || q?.id === `q${numericLevelId}` || q?.id === levelId) &&
+      hasLetterPairContent(q)
+  );
+
+  if (directMatch) return directMatch;
+
+  const firstFilled = normalizedQuestions.find(hasLetterPairContent);
+
+  return firstFilled || normalizedQuestions[0] || DEFAULT_LETTER_QUESTIONS[0];
+};
+
 const mergePictureQuestionsWithDefaults = (storedQuestions) => {
   const defaults = DEFAULT_PICTURE_QUESTIONS;
   const normalizedStored = normalizeQuestions(storedQuestions, 'picture') || [];
@@ -304,12 +325,12 @@ const mergePictureQuestionsWithDefaults = (storedQuestions) => {
 
   if (!validStored.length) return defaults;
 
-  const merged = defaults.map((defaultQuestion, index) => {
-    const storedMatch = validStored.find(
-      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
-    ) || validStored[index];
+ const merged = defaults.map((defaultQuestion) => {
+  const storedMatch = validStored.find(
+    q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+  ); // no more `|| validStored[index]`
 
-    if (!storedMatch) return defaultQuestion;
+  if (!storedMatch) return defaultQuestion;
 
     const hasContent = Boolean(
       storedMatch.imageUri ||
@@ -340,16 +361,36 @@ const mergePictureQuestionsWithDefaults = (storedQuestions) => {
   return [...merged, ...extras];
 };
 
+const getMatchingPictureQuestion = (questions, levelId) => {
+  const normalizedQuestions = Array.isArray(questions) ? questions : [];
+  const numericLevelId = Number(levelId);
+
+  const directMatch = normalizedQuestions.find(
+    q =>
+      (q?.number === numericLevelId || q?.number === levelId || q?.id === `q${numericLevelId}` || q?.id === levelId) &&
+      (q?.imageUri || q?.correctWord?.trim())
+  );
+
+  if (directMatch) return directMatch;
+
+  const firstFilledQuestion = normalizedQuestions.find(
+    q => q?.imageUri || q?.correctWord?.trim()
+  );
+
+  return firstFilledQuestion || normalizedQuestions[0] || DEFAULT_PICTURE_QUESTIONS[0];
+};
+
 const getMatchingWordQuestion = (questions, levelId) => {
   const normalizedQuestions = Array.isArray(questions) ? questions : [];
   const numericLevelId = Number(levelId);
 
   const directMatch = normalizedQuestions.find(
     q =>
-      q?.number === numericLevelId ||
-      q?.number === levelId ||
-      q?.id === `q${numericLevelId}` ||
-      q?.id === levelId
+      (q?.number === numericLevelId ||
+       q?.number === levelId ||
+       q?.id === `q${numericLevelId}` ||
+       q?.id === levelId) &&
+      (q?.targetWord?.trim() || q?.correctImageUri || q?.distractor1ImageUri || q?.distractor2ImageUri) // <-- must have content
   );
 
   if (directMatch) return directMatch;
@@ -377,12 +418,12 @@ const mergeWordQuestionsWithDefaults = (storedQuestions) => {
 
   if (!validStored.length) return defaults;
 
-  const merged = defaults.map((defaultQuestion, index) => {
-    const storedMatch = validStored.find(
-      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
-    ) || validStored[index];
+  const merged = defaults.map((defaultQuestion) => {
+  const storedMatch = validStored.find(
+    q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+  ); // no more `|| validStored[index]`
 
-    if (!storedMatch) return defaultQuestion;
+  if (!storedMatch) return defaultQuestion;
 
     const hasContent = Boolean(
       storedMatch.targetWord?.trim() ||
@@ -419,10 +460,11 @@ const getMatchingNumberQuestion = (questions, levelId) => {
 
   const directMatch = normalizedQuestions.find(
     q =>
-      q?.number === numericLevelId ||
-      q?.number === levelId ||
-      q?.id === `q${numericLevelId}` ||
-      q?.id === levelId
+      (q?.number === numericLevelId ||
+       q?.number === levelId ||
+       q?.id === `q${numericLevelId}` ||
+       q?.id === levelId) &&
+      (q?.targetNumber?.trim() || q?.correctWord?.trim() || q?.distractor1?.trim() || q?.distractor2?.trim())
   );
 
   if (directMatch) return directMatch;
@@ -437,7 +479,6 @@ const getMatchingNumberQuestion = (questions, levelId) => {
 
   return firstFilledQuestion || normalizedQuestions[0] || DEFAULT_NUMBER_QUESTIONS[0];
 };
-
 const mergeNumberQuestionsWithDefaults = (storedQuestions) => {
   const defaults = DEFAULT_NUMBER_QUESTIONS;
   const normalizedStored = normalizeQuestions(storedQuestions, 'number_word') || [];
@@ -450,12 +491,12 @@ const mergeNumberQuestionsWithDefaults = (storedQuestions) => {
 
   if (!validStored.length) return defaults;
 
-  const merged = defaults.map((defaultQuestion, index) => {
-    const storedMatch = validStored.find(
-      q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
-    ) || validStored[index];
+  const merged = defaults.map((defaultQuestion) => {
+  const storedMatch = validStored.find(
+    q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+  ); // no more `|| validStored[index]`
 
-    if (!storedMatch) return defaultQuestion;
+  if (!storedMatch) return defaultQuestion;
 
     const hasContent = Boolean(
       storedMatch.targetNumber?.trim() ||
@@ -514,10 +555,12 @@ const mergeSoundQuestionsWithDefaults = (storedQuestions) => {
 
   if (!validStored.length) return defaults;
 
-  const merged = defaults.map((defaultQuestion, index) => {
-    const storedMatch = validStored.find(
-      question => question.number === defaultQuestion.number || question.id === defaultQuestion.id
-    ) || validStored[index];
+ const merged = defaults.map((defaultQuestion) => {
+  const storedMatch = validStored.find(
+    q => q.number === defaultQuestion.number || q.id === defaultQuestion.id
+  ); // no more `|| validStored[index]`
+
+  if (!storedMatch) return defaultQuestion;
 
     if (!storedMatch) return defaultQuestion;
 
@@ -728,11 +771,13 @@ const LessonScreen = ({ route, navigation }) => {
 
   // Active question extraction based on selected level number
   const activeLetterQuestions = publishedLetterQuestions || letterQuestions || DEFAULT_LETTER_QUESTIONS;
-  const activeLetterQuestion = activeLetterQuestions.find(q => q.number === levelId) || activeLetterQuestions[0];
+  const activeLetterQuestion = getMatchingLetterQuestion(activeLetterQuestions, levelId);
   const activePairs = activeLetterQuestion.pairs || [];
 
-  const activePicQuestion = (publishedPictureQuestions || pictureQuestions || DEFAULT_PICTURE_QUESTIONS)
-    .find(q => q.number === levelId) || (publishedPictureQuestions || pictureQuestions || DEFAULT_PICTURE_QUESTIONS)[0] || DEFAULT_PICTURE_QUESTIONS[0];
+  const activePicQuestion = getMatchingPictureQuestion(
+  publishedPictureQuestions || pictureQuestions || DEFAULT_PICTURE_QUESTIONS,
+  levelId
+);
   const activeWordQuestion = getMatchingWordQuestion(
     publishedWordQuestions || wordQuestions || DEFAULT_WORD_QUESTIONS,
     levelId
